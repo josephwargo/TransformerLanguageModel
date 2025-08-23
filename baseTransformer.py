@@ -1,6 +1,6 @@
 import numpy as np
-from neuronLayer import neuronLayer
-import costsAndActivations as caa
+from neuron_layer import neuron_layer
+import costs_and_activations as caa
 
 # entire net
 class neuralNet(object):
@@ -39,7 +39,7 @@ class neuralNet(object):
         self.lossGradients = []
         
         # initializing hidden layers and adding to dictionary of all layers
-        hiddenLayer1 = neuronLayer(self.embeddingsShape, hiddenLayerShapes[0],
+        hiddenLayer1 = neuron_layer(self.embeddingsShape, hiddenLayerShapes[0],
                                     hiddenLayerActivations[0], batchSize=self.batchSize,
                                     clipVal=self.clipVal, learningRate=self.learningRate,
                                     rnn=True, adam=adam)
@@ -48,13 +48,13 @@ class neuralNet(object):
             for count, inputShape in enumerate(hiddenLayerShapes):
                 layerNum = count+2
                 if count<len(hiddenLayerShapes)-1:
-                    self.layers["hiddenLayer{}".format(layerNum)] = neuronLayer(
+                    self.layers["hiddenLayer{}".format(layerNum)] = neuron_layer(
                         inputShape, hiddenLayerShapes[count+1], hiddenLayerActivations[count+1],
                         batchSize=self.batchSize, clipVal=self.clipVal, learningRate=self.learningRate,
                         rnn=True, adam=adam)
        
         # adding output layer to dictionary of all layers
-        outputLayer = neuronLayer(
+        outputLayer = neuron_layer(
             prevLayerShape=hiddenLayerShapes[-1], outputShape=self.numEmbeddings, activation=outputActivation,
             batchSize=self.batchSize, clipVal=self.clipVal, learningRate=self.learningRate,
             rnn=False, adam=adam)
