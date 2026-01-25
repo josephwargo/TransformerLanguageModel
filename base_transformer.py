@@ -5,16 +5,22 @@ import Attention.attention_block as ab
 
 # entire net
 class transformer(object):
-    def __init__(self, embeddings, word2ind, output_activation_function, hidden_layer_shapes, 
-                 hidden_layer_activations, loss_function='cross_entropy_loss', learning_rate=.001, epochs=1, batch_size=8,
-                 adam=False, clip_val=1, debug=False):
+    def __init__(
+          self, embeddings, word2ind
+        , input_layer_shape, input_layer_activation
+        , hidden_layer_shapes, hidden_layer_activations
+        , output_layer_activation
+        , loss_function='cross_entropy_loss'
+        , learning_rate=.001, epochs=1, batch_size=8
+        , adam=False, clip_val=1, debug=False
+    ):
         
         self.debug = debug
 
         # errors
         if len(hidden_layer_shapes)!=len(hidden_layer_activations):
             raise Exception('Length of hidden_layer_shapes does not match length of hidden_layer_activations')
-        if ((loss_function=='cross_entropy_loss') & (output_activation_function!='softmax')) or ((loss_function!='cross_entropy_loss') & (output_activation_function=='softmax')):
+        if ((loss_function=='cross_entropy_loss') & (output_layer_activation!='softmax')) or ((loss_function!='cross_entropy_loss') & (output_layer_activation=='softmax')):
             raise Exception('A cost function of Cross Entropy Loss and an output layer activation of Softmax must be paired with each other')
         if adam & (learning_rate>.01):
             print('Warning: Learning rate may be too high for ADAM optimizer to function properly')
@@ -27,6 +33,13 @@ class transformer(object):
         self.word2ind_mapper = np.vectorize(word2ind.get)
         self.embeddings_shape = embeddings.shape[1]
         self.num_embeddings = embeddings.shape[0]
+
+        # layer details
+        self.input_layer_shape = input_layer_shape
+        self.input_layer_activation = input_layer_activation
+        self.hidden_layer_shapes = hidden_layer_shapes
+        self.hidden_layer_activations = hidden_layer_activations
+        self.output_layer_activation = output_layer_activation
         
         # hyperparameters
         self.epochs = epochs
@@ -35,21 +48,28 @@ class transformer(object):
         self.learning_rate = np.float32(learning_rate)
         self.loss_function = loss_function
         self.clip_val = np.float32(clip_val)
-        self.activations = hidden_layer_activations + [output_activation_function]
+        self.activations = hidden_layer_activations + [output_layer_activation]
 
         # loss
         self.localLoss = []
         self.loss = []
         self.lossGradients = []
         
-        # TODO: Input layer
-        # output_layer = ff.neuron_layer()
+        ####################################
+        # Input Layer
+        ####################################
+        self.input_layer = ff.neuron_layer(
+              input_shape=self.input_layer_shape, output_shape=self.hidden_layer_shapes[0]
+            , activation=self.input_layer_activation
+            , batch_size=self.batch_size, clip_val=self.clip_val, learning_rate=self.learning_rate, adam=self.adam
+        )
 
-        # creating transformer blocks
-        self.transformer_layers = {}
-        for layer_num, layer in enumerate(hidden_layer_shapes):
-            # dictionary to define this layer
-            transformer_layer = {}
+        ####################################
+        # Transformer Blocks
+        ####################################
+        self.transformer_layers = {} # dictionary to hold all transformer layers
+        for layer_num, layer in enumerate(self.hidden_layer_shapes):
+            transformer_layer = {} # dictionary to define this layer
 
             # first layer norm
             # TODO: update shapes to be hyperparameters
@@ -57,9 +77,11 @@ class transformer(object):
             transformer_layer['layer_norm_1'] = layer_norm_1
 
             # self-attention
-            self_attention = ab.attention_block(num_heads=8, input_dimension=512,
-                                                head_output_dimension=64,
-                                                block_output_dimension=128)
+            self_attention = ab.attention_block(
+                  num_heads=8, input_dimension=512
+                , head_output_dimension=64
+                , block_output_dimension=128
+            )
             transformer_layer['self_attention'] = self_attention
 
             # residual add
@@ -71,10 +93,10 @@ class transformer(object):
 
             # feed forward
             # TODO: update shapes to be hyperparameters
-            feed_forward_layer = ff.neuron_layer(input_shape=100, output_shape=100,
-                                                 activation='relu', batch_size=1,
-                                                 clip_val=1, learning_rate=.001, adam=False
-                                                 )
+            feed_forward_layer = ff.neuron_layer(
+                  input_shape=100, output_shape=100, activation='relu', batch_size=self.batch_size
+                , clip_val=self.clip_val, learning_rate=self.learning_rate, adam=self.adam
+            )
             transformer_layer['feed_forward'] = feed_forward_layer
 
             # residual add
@@ -82,6 +104,9 @@ class transformer(object):
 
             self.transformer_layers[f'transformer_layer_{layer_num}'] = transformer_layer
 
+        ####################################
+        # Output Layer #
+        ####################################
         # TODO: Output layer
         # output_layer = ff.neuron_layer()
 

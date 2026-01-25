@@ -27,13 +27,13 @@ class attention_block(object):
 
     def multi_head_attention(self, word_embedding):
         # calculating the scores for each head
+        # TODO: Parallelize
         for head_name in self.heads.keys():
             head = self.heads[head_name]
             head_attention = head.attention_score(word_embedding)
             self.attention_scores[head_name] = head_attention
 
         # concatenating scores together and running through the weights to get desired output shape
-        # print('here')
         attention_scores_list = list(self.attention_scores.values())
         head_attentions_concat = np.concatenate(attention_scores_list, axis=1)
 
