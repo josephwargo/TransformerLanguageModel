@@ -3,21 +3,21 @@ class neuron_layer(object):
     def __init__(self, input_shape, output_shape, activation, batch_size,
                  clip_val, learning_rate, adam=False):
 
-        # layer info
-        self.input_shape = input_shape
-        self.output_shape = output_shape
-        layer_xavier = np.sqrt(2/(self.input_shape+self.output_shape))
-        self.layer_weights = np.random.normal(0,layer_xavier, size=(self.input_shape,self.output_shape)).astype(np.float32)
+        # layer info 
+        self.input_shape = input_shape # length of vector that will be inputted into the weights
+        self.output_shape = output_shape # desired length of weight output (and therefore layer output)
+        layer_xavier = np.sqrt(2/(self.input_shape+self.output_shape)) # value used to determine optimal
+        self.layer_weights = np.random.normal(0,layer_xavier, size=(self.input_shape,self.output_shape)).astype(np.float32) # optimal weight initialization via xavier
 
-        self.bias = np.zeros(shape=(output_shape)).astype(np.float32)
+        self.bias = np.zeros(shape=(output_shape)).astype(np.float32) # initializing bias as 0s - no xavier here
 
         # activation
-        self.activation = activation
+        self.activation = activation # activation function that will be applied to the output of the weights
 
         # hyperparameters
-        self.batch_size = batch_size
-        self.clip_val = clip_val
-        self.learning_rate = learning_rate
+        self.batch_size = batch_size # number of instances per training run
+        self.clip_val = clip_val # used to set the upper and lower bounds for what we will let weight updates hit
+        self.learning_rate = learning_rate # value we multiply by the weight updates given to us via gradient descent
 
         # adam
         self.adam = adam
