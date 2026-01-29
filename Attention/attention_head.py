@@ -17,21 +17,23 @@ class attention_head(object):
         self.W_v = np.random.normal(0, xavier_val, size=(self.input_dimension, self.head_dimension)).astype(np.float32) # value weights
 
         # initialization of q, k, and v vectors
-        self.q = None
-        self.k = None
-        self.v = None
+        # self.q = None
+        # self.k = None
+        # self.v = None
 
     def calculate_q_k_v(self, word_embeddings):
-        self.q = word_embeddings @ self.W_q
-        self.k = word_embeddings @ self.W_k
-        self.v = word_embeddings @ self.W_v
+        q = word_embeddings @ self.W_q
+        k = word_embeddings @ self.W_k
+        v = word_embeddings @ self.W_v
+
+        return q, k, v
 
     def masked_attention_score(self, word_embeddings):
         # calculating q, k, and v
-        self.calculate_q_k_v(word_embeddings)
+        q, k, v = self.calculate_q_k_v(word_embeddings)
 
         # calculating attention score
-        score_matrix = self.q @ self.k.T
+        score_matrix = q @ k.T
         scaled_score_matrix = score_matrix / self.dim_sqrt
 
         # determining & applying the mask
@@ -46,8 +48,6 @@ class attention_head(object):
         # print(softmax_masked_score.shape)
 
         # applying attention score to values to "weight" each word by its respective attention
-        masked_self_attention = softmax_masked_score @ self.v
+        masked_self_attention = softmax_masked_score @ v
 
-        print(masked_self_attention.shape)
-
-        # return masked_self_attention.shape
+        return masked_self_attention
