@@ -2,10 +2,10 @@ import numpy as np
 
 class layer_norm(object):
     def __init__(self, input_size):
-        self.gamma = None # needs to be the size of the input shape
-        self.beta = None # needs to be the size of the input shape
+        self.gamma = np.ones(shape=input_size)
+        self.beta = np.zeros(shape=input_size)
 
-    def x_hat(x):
+    def x_hat(self, x):
         x_mean = np.mean(x)
         x_std_dev = np.std(x)
 
@@ -13,5 +13,5 @@ class layer_norm(object):
 
         return x_hat
     
-    def affine_trans(x_hat):
-        pass
+    def layer_norm(self, x):
+        return self.gamma * self.x_hat(x) + self.beta
