@@ -35,6 +35,6 @@ class attention_block(object):
         attention_scores_list = list(attention_scores.values())
         head_attentions_concat = np.concatenate(attention_scores_list, axis=1)
 
-        # saving and returning - not sure if we need to do both?
+        # calculating final attention scores and returning
         attention_scores_concat = head_attentions_concat @ self.W_o
         return attention_scores_concat

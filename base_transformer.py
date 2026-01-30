@@ -2,6 +2,7 @@ import numpy as np
 import feed_forward as ff
 import costs_and_activations as caa
 import Attention.attention_block as ab
+import transformer_block as tb
 
 # entire net
 class transformer(object):
@@ -69,40 +70,12 @@ class transformer(object):
         ####################################
         self.transformer_layers = {} # dictionary to hold all transformer layers
         for layer_num, layer in enumerate(self.hidden_layer_shapes):
-            transformer_layer = {} # dictionary to define this layer
-
-            # first layer norm
-            # TODO: update shapes to be hyperparameters
-            layer_norm_1 = None
-            transformer_layer['layer_norm_1'] = layer_norm_1
-
-            # self-attention
-            self_attention = ab.attention_block(
-                  num_heads=8, input_dimension=512
-                , head_output_dimension=64
-                , block_output_dimension=128
+            self.transformer_layers[f'transformer_layer_{layer_num}'] = tb.transformer_block(
+            # TODO: after finishing up transformer_block class, add these as parameters for the transformer object
+            #   num_heads, input_dimension
+            # , head_output_dimension
+            # , block_output_dimension
             )
-            transformer_layer['self_attention'] = self_attention
-
-            # residual add
-            # TODO: remember to execute this during the forward pass
-
-            # second layer norm
-            layer_norm_2 = None
-            transformer_layer['layer_norm_2'] = layer_norm_2
-
-            # feed forward
-            # TODO: update shapes to be hyperparameters
-            feed_forward_layer = ff.neuron_layer(
-                  input_shape=100, output_shape=100, activation='relu', batch_size=self.batch_size
-                , clip_val=self.clip_val, learning_rate=self.learning_rate, adam=self.adam
-            )
-            transformer_layer['feed_forward'] = feed_forward_layer
-
-            # residual add
-            # TODO: remember to execute this during the forward pass
-
-            self.transformer_layers[f'transformer_layer_{layer_num}'] = transformer_layer
 
         ####################################
         # Output Layer #
