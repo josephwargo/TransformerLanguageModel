@@ -1,15 +1,18 @@
 import numpy as np
 import feed_forward as ff
 import costs_and_activations as caa
-import Attention.attention_block as ab
+import layer_norm as ln
 import transformer_block as tb
 
 # entire net
 class transformer(object):
     def __init__(
-          self, embeddings, word2ind
+          self
+        # , embeddings, word2ind
         , input_layer_shape, input_layer_activation
         , hidden_layer_shapes, hidden_layer_activations
+        , hidden_layer_num_heads
+        , output_shape
         , output_layer_activation
         , loss_function='cross_entropy_loss'
         , learning_rate=.001, epochs=1, batch_size=8
@@ -28,18 +31,20 @@ class transformer(object):
        
         # variables straight from initialization
         # embeddings
-        self.embeddings = embeddings
+        # self.embeddings = embeddings
         # self.corpus = corpus
-        self.word2ind = word2ind
-        self.word2ind_mapper = np.vectorize(word2ind.get)
-        self.embeddings_shape = embeddings.shape[1]
-        self.num_embeddings = embeddings.shape[0]
+        # self.word2ind = word2ind
+        # self.word2ind_mapper = np.vectorize(word2ind.get)
+        # self.embeddings_shape = embeddings.shape[1]
+        # self.num_embeddings = embeddings.shape[0]
 
         # layer details
         self.input_layer_shape = input_layer_shape
         self.input_layer_activation = input_layer_activation
         self.hidden_layer_shapes = hidden_layer_shapes
         self.hidden_layer_activations = hidden_layer_activations
+        self.hidden_layer_num_heads = hidden_layer_num_heads
+        self.output_shape = output_shape
         self.output_layer_activation = output_layer_activation
         
         # hyperparameters
@@ -56,134 +61,78 @@ class transformer(object):
         self.loss = []
         self.lossGradients = []
         
-        ####################################
-        # Input Layer
-        ####################################
+####################################
+# Init Input Layer
+####################################
         self.input_layer = ff.neuron_layer(
               input_shape=self.input_layer_shape, output_shape=self.hidden_layer_shapes[0]
             , activation=self.input_layer_activation
             , batch_size=self.batch_size, clip_val=self.clip_val, learning_rate=self.learning_rate, adam=self.adam
         )
 
-        ####################################
-        # Transformer Blocks
-        ####################################
+####################################
+# Init Transformer Blocks
+####################################
         self.transformer_layers = {} # dictionary to hold all transformer layers
         for layer_num, layer in enumerate(self.hidden_layer_shapes):
+            
+            layer_num_heads = hidden_layer_num_heads[layer_num]
+            layer_block_shape = self.hidden_layer_shapes[layer_num]
+            layer_activation = self.activations[layer_num]
+
             self.transformer_layers[f'transformer_layer_{layer_num}'] = tb.transformer_block(
-            # TODO: after finishing up transformer_block class, add these as parameters for the transformer object
-            #   num_heads, input_dimension
-            # , head_output_dimension
-            # , block_output_dimension
+                  num_heads=layer_num_heads, block_shape=layer_block_shape
+                , activation=layer_activation
+                , batch_size=self.batch_size, clip_val=self.clip_val
+                , learning_rate=self.learning_rate , adam=self.adam
             )
 
-        ####################################
-        # Output Layer #
-        ####################################
-        # TODO: Output layer
-        # output_layer = ff.neuron_layer()
+####################################
+# Init Output Layer #
+####################################
+        output_layer_input_shape = self.hidden_layer_shapes[-1]
+        self.output_layer_norm = ln.layer_norm(output_layer_input_shape)
+        self.output_layer = ff.neuron_layer(
+              input_shape=output_layer_input_shape, output_shape=self.output_shape
+            , activation=self.output_layer_activation, batch_size=self.batch_size
+            , clip_val=self.clip_val, learning_rate=self.learning_rate, adam=self.adam)
+        
+        # TODO: revisit dictionary/embeddings
+        # self.current_text = None
+        # self.pad_index = self.word2ind['<PAD>']
 
-        self.current_text = None
-        self.pad_index = self.word2ind['<PAD>']
 
-    def input_2_ind(self, text, train=True):
-        if train:
-            longest_sequence = max(len(sequence) for sequence in text)
-            pad_val = '<PAD>'
-            text = [sequence + [pad_val] * (longest_sequence - len(sequence)) for sequence in text]
-        text = self.word2ind_mapper(text)
 
-        return text
+# TODO: revisit dictionary/embeddings
+    # def input_2_ind(self, text, train=True):
+    #     if train:
+    #         longest_sequence = max(len(sequence) for sequence in text)
+    #         pad_val = '<PAD>'
+    #         text = [sequence + [pad_val] * (longest_sequence - len(sequence)) for sequence in text]
+    #     text = self.word2ind_mapper(text)
 
-    def train_forward_pass(self):
-        pass
+    #     return text
 
-    def forward_pass_per_word(self, prev_layer_output, train):
-        # cycling through each layer
-        for layer_name in self.layers.keys():
-            curr_layer = self.layers[layer_name]
-            # for output layer
-            if layer_name == 'output_layer':
+####################################
+# Forward Pass #
+####################################
+    def forward_pass(self, x, train=True):
+        # TODO: how this changes for train vs test
+        
+        # input layer
+        x = self.input_layer.forward_pass(x)
 
-                z = prev_layer_output @ curr_layer.layer_weights + curr_layer.bias
-                logits = z
+        # transformer blocks
+        for transformer_block in self.transformer_layers.values():
+            x = transformer_block.forward_pass(x)
 
-                # updating hidden state
-                # curr_layer. = prev_layer_output
+        # final layer norm
+        x = self.output_layer_norm.layer_norm(x)
 
-            # for non-output layers
-            else:
-                if train:
-                    # adding previous layer and timestep hidden states to memory (for BPTT)
-                    curr_layer.prev_layer_output_memory.append(prev_layer_output)
-                    curr_layer.prevTimeStepOutputMemory.append(curr_layer.thisLayerMostRecentOutput.copy())
-                
-                # calculating hidden state (dot products and activation)
-                # layerDotProduct = np.dot(prev_layer_output, curr_layer.layerWeights)
-                layerDotProduct = prev_layer_output @ curr_layer.layerWeights
-                # print(layerDotProduct.shape)
-                timeDotProduct = curr_layer.thisLayerMostRecentOutput @ curr_layer.timeWeights
-                # print(timeDotProduct.shape)
-                # print(timeDotProduct.shape)
-                z = layerDotProduct + timeDotProduct + curr_layer.bias # z = Uh + Wx + b
-                hiddenState = caa.activation(curr_layer.activation, z) # activation - depending on the layer
-                # print(hiddenState.shape)
-                # updating hidden state and hidden state memory
-                curr_layer.thisLayerMostRecentOutput = hiddenState
-                if train:
-                    curr_layer.thisLayerOutputMemory.append(hiddenState.copy())
+        # output layer
+        x = self.output_layer.forward_pass(x)
 
-                # updating so that this outputs hidden state feeds into 
-                prev_layer_output = hiddenState
-        return logits
-
-    # training methods
-    def forwardPass(self, text, train=True):
-        # cycling through each word (timestep)
-        self.current_text = self.input_2_ind(text, train)
-        if train:
-            numSteps = self.current_text.shape[1]
-        else:
-            numSteps = self.current_text.shape[0]
-        for wordIndex in range(numSteps-1):
-            # selecting proper input embeddings
-            if train:
-                inputWords = self.current_text[:,wordIndex]
-            else:
-                inputWords = self.current_text[wordIndex]
-
-            prev_layer_output = self.embeddings[inputWords]
-            
-
-            # selecting index for output word
-            if train:
-                outputVocabIndex = self.current_text[:, wordIndex+1]
-                padMask = outputVocabIndex!=self.pad_index
-            else:
-                outputVocabIndex = self.current_text[wordIndex+1]
-            # outputVocabIndex = self.word2ind[outputWord]
-            
-            # iterating through each layer per word
-            logits = self.forward_pass_per_word(prev_layer_output, train)
-
-            if train:
-                # storing local loss and loss gradients
-                if self.loss_function == 'cross_entropy_loss':
-                    loss = caa.cross_entropy_loss(outputVocabIndex[padMask], logits[padMask])
-                    self.localLoss.append(loss)
-                    # gradient
-                    gradient = caa.softmaxLocalError(outputVocabIndex[padMask], logits[padMask])
-                    fullGradient = np.zeros_like(logits)
-                    fullGradient[padMask] = gradient
-                    self.lossGradients.append(fullGradient) # dLdH
-                else:
-                    raise Exception('Unknown loss function')
-        if train:
-            # calculating final loss (divided over all words in the text)
-            meanLoss = np.mean(self.localLoss)
-            self.loss.append(meanLoss)
- 
-        return logits
+        return x
 
     def backwardPassPerTimestep(self, layerLocalError, reverseKeys, timeStep):
         # iterating through layers backwards

@@ -2,23 +2,25 @@ import numpy as np
 import Attention.attention_head as ah
 
 class attention_block(object):
-    def __init__(self, num_heads, input_dimension, head_output_dimension, block_output_dimension):
+    def __init__(self, num_heads, block_shape):
+        if block_shape%num_heads != 0:
+            raise Exception('Error: Attention Block input shape not divisible by number of heads.')
+        
         # parameters for size
         self.num_heads = num_heads
-        self.input_dimension = input_dimension
-        self.head_output_dimension = head_output_dimension
-        self.block_output_dimension = block_output_dimension
+        self.block_shape = block_shape
+        self.head_output_dimension = int(block_shape/num_heads)
 
         # dictionary to store heads
         self.heads = {}
         for head_num in range(self.num_heads):
             head_name = f"head_{head_num}"
-            self.heads[head_name] = ah.attention_head(self.input_dimension, self.head_output_dimension)
+            self.heads[head_name] = ah.attention_head(self.block_shape, self.head_output_dimension)
         
         # weights to aggregate heads
         # initialization of weights - using only Xavier for now
-        xavier_val = np.sqrt(2/(self.input_dimension+self.block_output_dimension))
-        self.W_o = np.random.normal(0, xavier_val, size=(self.input_dimension, self.block_output_dimension)).astype(np.float32)
+        xavier_val = np.sqrt(2/(self.block_shape+self.block_shape))
+        self.W_o = np.random.normal(0, xavier_val, size=(self.block_shape, self.block_shape)).astype(np.float32)
         
     def multi_head_attention(self, word_embedding):
         # calculating the scores for each head
