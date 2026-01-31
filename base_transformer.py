@@ -1,6 +1,7 @@
 import numpy as np
 import feed_forward as ff
 import costs_and_activations as caa
+import Embeddings.positional_embedding as pe
 import layer_norm as ln
 import transformer_block as tb
 
@@ -64,6 +65,9 @@ class transformer(object):
 ####################################
 # Init Input Layer
 ####################################
+        # TODO: make max_seq_len a thing, and update this after making d_model a thing
+        self.positional_embeddings = pe.positional_embedding(max_seq_len=9, d_model=input_layer_shape)
+
         self.input_layer = ff.neuron_layer(
               input_shape=self.input_layer_shape, output_shape=self.hidden_layer_shapes[0]
             , activation=self.input_layer_activation
@@ -118,8 +122,10 @@ class transformer(object):
 ####################################
     def forward_pass(self, x, train=True):
         # TODO: how this changes for train vs test
-        
+        print(x.shape)
         # input layer
+        x = self.positional_embeddings.forward_pass(x)
+        
         x = self.input_layer.forward_pass(x)
 
         # transformer blocks
@@ -134,6 +140,9 @@ class transformer(object):
 
         return x
 
+####################################
+# Backward Pass #
+####################################
     def backwardPassPerTimestep(self, layerLocalError, reverseKeys, timeStep):
         # iterating through layers backwards
         for layerNum, layer_name in enumerate(reverseKeys):
