@@ -32,8 +32,14 @@ class attention_head(object):
         # calculating q, k, and v
         q, k, v = self.calculate_q_k_v(word_embeddings)
 
-        # calculating attention score
-        score_matrix = q @ k.T
+        # accounting for batching in transposing k
+        if len(k.shape)>2:
+            k_T = np.transpose(k, axes=(0,2,1))
+        else:
+            k_T = k.T
+
+        # calculating attention score & scaling
+        score_matrix = q @ k_T
         scaled_score_matrix = score_matrix / self.dim_sqrt
 
         # determining & applying the mask
@@ -45,7 +51,6 @@ class attention_head(object):
         #applying softmax
         softmax_masked_score = caa.softmax(masked_score)
 
-        # print(softmax_masked_score.shape)
 
         # applying attention score to values to "weight" each word by its respective attention
         masked_self_attention = softmax_masked_score @ v
