@@ -11,5 +11,6 @@ class positional_embedding(object):
 
         self.embeddings = np.random.normal(0, .02, size=(self.max_seq_len, d_model))
 
-    def forward_pass(self, x):
-        return x + self.embeddings
+    def forward_pass(self, x, seq_len):
+        embeddings_slized = self.embeddings[:seq_len]
+        return x + embeddings_slized
