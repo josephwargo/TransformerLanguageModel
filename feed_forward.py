@@ -1,4 +1,7 @@
 import numpy as np
+import costs_and_activations as caa
+
+
 class neuron_layer(object):
     def __init__(self, input_shape, output_shape, activation, batch_size,
                  clip_val, learning_rate, adam=False):
@@ -33,7 +36,17 @@ class neuron_layer(object):
 
             self.md_bias = np.zeros(shape=(output_shape)).astype(np.float32)         
             self.vd_bias = np.zeros(shape=(output_shape)).astype(np.float32)
-    
+
+
+####################################
+# Forward Pass #
+####################################
+    def forward_pass(self, x):
+        return caa.activation(self.activation, x @ self.layer_weights + self.bias)
+
+####################################
+# Backward Pass #
+####################################
     def update(self, num_steps):
 
         # normalizing
