@@ -35,7 +35,7 @@ class attention_block(object):
 
         # concatenating scores together and running through the weights to get desired output shape
         attention_scores_list = list(attention_scores.values())
-        head_attentions_concat = np.concatenate(attention_scores_list, axis=1)
+        head_attentions_concat = np.concatenate(attention_scores_list, axis=-1)
 
         # calculating final attention scores and returning
         attention_scores_concat = head_attentions_concat @ self.W_o

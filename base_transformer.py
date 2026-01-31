@@ -122,7 +122,7 @@ class transformer(object):
 ####################################
     def forward_pass(self, x, train=True):
         # TODO: how this changes for train vs test
-        print(x.shape)
+
         # input layer
         x = self.positional_embeddings.forward_pass(x)
         
@@ -136,9 +136,14 @@ class transformer(object):
         x = self.output_layer_norm.layer_norm(x)
 
         # output layer
-        x = self.output_layer.forward_pass(x)
+        logits = self.output_layer.forward_pass(x)
 
-        return x
+        return logits
+    
+    def next_token_vocab_index(self, x):
+        logits = self.forward_pass(x)
+        next_token_logits = logits[:, -1, :]
+        return np.argmax(next_token_logits, axis=1)
 
 ####################################
 # Backward Pass #
