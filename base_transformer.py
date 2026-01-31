@@ -66,7 +66,7 @@ class transformer(object):
 # Init Input Layer
 ####################################
         # TODO: make max_seq_len a thing, and update this after making d_model a thing
-        self.positional_embeddings = pe.positional_embedding(max_seq_len=9, d_model=input_layer_shape)
+        self.positional_embeddings = pe.positional_embedding(max_seq_len=1024, d_model=input_layer_shape)
 
         self.input_layer = ff.neuron_layer(
               input_shape=self.input_layer_shape, output_shape=self.hidden_layer_shapes[0]
@@ -122,9 +122,9 @@ class transformer(object):
 ####################################
     def forward_pass(self, x, train=True):
         # TODO: how this changes for train vs test
-
         # input layer
-        x = self.positional_embeddings.forward_pass(x)
+        batch_length = x.shape[-2]
+        x = self.positional_embeddings.forward_pass(x, batch_length)
         
         x = self.input_layer.forward_pass(x)
 
