@@ -22,6 +22,9 @@ class neuron_layer(object):
         self.clip_val = clip_val # used to set the upper and lower bounds for what we will let weight updates hit
         self.learning_rate = learning_rate # value we multiply by the weight updates given to us via gradient descent
 
+        # hidden state
+        self.hidden_state = None
+
         # adam
         self.adam = adam
         if adam:
@@ -41,8 +44,11 @@ class neuron_layer(object):
 ####################################
 # Forward Pass #
 ####################################
-    def forward_pass(self, x):
-        return caa.activation(self.activation, x @ self.layer_weights + self.bias)
+    def forward_pass(self, x, train=False):
+        hidden_state = caa.activation(self.activation, x @ self.layer_weights + self.bias)
+        if train:
+            self.hidden_state = hidden_state
+        return hidden_state
 
 ####################################
 # Backward Pass #

@@ -58,9 +58,12 @@ class transformer(object):
         self.activations = hidden_layer_activations + [output_layer_activation]
 
         # loss
-        self.localLoss = []
-        self.loss = []
-        self.lossGradients = []
+        # self.localLoss = []
+        # self.loss = []
+        # self.lossGradients = []
+
+        # layers
+        # self.layers = []
         
 ####################################
 # Init Input Layer
@@ -120,7 +123,7 @@ class transformer(object):
 ####################################
 # Forward Pass #
 ####################################
-    def forward_pass(self, x, train=True):
+    def forward_pass(self, x, train=False):
         # TODO: how this changes for train vs test
         # input layer
         batch_length = x.shape[-2]
@@ -138,16 +141,33 @@ class transformer(object):
         # output layer
         logits = self.output_layer.forward_pass(x)
 
-        return logits
+        if train:
+            loss = caa.crossEntropyLoss(1, logits)
+        else:
+            loss = None
+
+        return logits, loss
     
     def next_token_vocab_index(self, x):
-        logits = self.forward_pass(x)
+        logits, loss = self.forward_pass(x)
         next_token_logits = logits[:, -1, :]
         return np.argmax(next_token_logits, axis=1)
 
 ####################################
 # Backward Pass #
 ####################################
+
+    def loss(self, Y, logits):
+        pass
+
+    def backward_pass(self, loss):
+        # TODO: return to after I do the backwards pass for each
+        pass
+        # dL_dZ_output = self.output_layer.backward_pass(loss)
+
+
+
+
     def backwardPassPerTimestep(self, layerLocalError, reverseKeys, timeStep):
         # iterating through layers backwards
         for layerNum, layer_name in enumerate(reverseKeys):
