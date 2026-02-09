@@ -7,21 +7,20 @@ def MSEgradient(y, y_pred):
     return (y_pred-y) / y.size
 
 # no gradient function because this will only be paired with softmax, and they have a joint gradient function
-def crossEntropyLoss(yIndex, logits):
+def cross_entropy_loss(logits, Y_ind):
     # determining maxes to normalize
-    maxLogits = logits.max(axis=1, keepdims=True)
+    max_logits = logits.max(axis=1, keepdims=True)
 
     # using log sum exp trick
-    normalizedExp = np.exp(logits - maxLogits)
-    normalizedProbs = normalizedExp.sum(axis=1, keepdims=True)
-    logSumExp = maxLogits + np.log(normalizedProbs+1e-12)
+    norm_exp = np.exp(logits - max_logits)
+    sum_norm_exp = norm_exp.sum(axis=1, keepdims=True)
+    log_sum_exp = max_logits + np.log(sum_norm_exp+1e-12)
 
     # geting the log probability
-    updatedLogits = logits[np.arange(logits.shape[0]), yIndex][:, None]
-    logProb = logSumExp - updatedLogits
+    true_val_logits = logits[np.arange(logits.shape[0]), Y_ind][:, None]
+    log_prob = log_sum_exp - true_val_logits
 
-    return logProb.mean()
-    # return logProb
+    return log_prob.mean()
 
 # functions to compute activation and gradient of activations
 def sigmoid(x):
@@ -55,10 +54,10 @@ def softmax(logits):
     return numerator / (denominator+1e-8)
 
 # special gradient for softmax & cross entropy loss
-def softmaxLocalError(wordIndex, logits):
-    prob = softmax(logits)
-    prob[np.arange(prob.shape[0]), wordIndex] -= 1.0
-    return prob / logits.shape[0]
+def softmax_cross_entropy_grad(logits, Y_ind):
+    prob_dist = softmax(logits)
+    prob_dist[np.arange(prob_dist.shape[0]), Y_ind] -= 1.0
+    return prob_dist / logits.shape[0]
     # return prob
 
 # choosing activation
@@ -75,16 +74,16 @@ def activation(activationName, z):
         raise Exception('Unknown activation function')
 
 # choosing gradient
-def localError(activationName, hiddenState, dLdH):
+def loss_grad(activationName, hiddenState, dLdH):
     if activationName == 'relu':
         dHdZ = reluGradient(hiddenState)
-        localError = dLdH * dHdZ
+        loss_grad = dLdH * dHdZ
     elif activationName == 'sigmoid':
         dHdZ = sigmoidGradient(hiddenState)
-        localError = dLdH * dHdZ
+        loss_grad = dLdH * dHdZ
     elif activationName == 'tanH':
         dHdZ = tanHGradient(hiddenState)
-        localError = dLdH * dHdZ
+        loss_grad = dLdH * dHdZ
     # special case of softmax & cross entropy loss
     # TBD
-    return localError
+    return loss_grad
