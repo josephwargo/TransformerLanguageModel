@@ -14,7 +14,7 @@ class transformer(object):
         , hidden_layer_shapes, hidden_layer_activations
         , hidden_layer_num_heads
         , output_shape
-        , output_layer_activation
+        # , output_layer_activation
         , loss_function='cross_entropy_loss'
         , learning_rate=.001, epochs=1, batch_size=8
         , adam=False, clip_val=1, debug=False
@@ -25,8 +25,8 @@ class transformer(object):
         # errors
         if len(hidden_layer_shapes)!=len(hidden_layer_activations):
             raise Exception('Length of hidden_layer_shapes does not match length of hidden_layer_activations')
-        if ((loss_function=='cross_entropy_loss') & (output_layer_activation!='softmax')) or ((loss_function!='cross_entropy_loss') & (output_layer_activation=='softmax')):
-            raise Exception('A cost function of Cross Entropy Loss and an output layer activation of Softmax must be paired with each other')
+        # if ((loss_function=='cross_entropy_loss') & (output_layer_activation!='softmax')) or ((loss_function!='cross_entropy_loss') & (output_layer_activation=='softmax')):
+        #     raise Exception('A cost function of Cross Entropy Loss and an output layer activation of Softmax must be paired with each other')
         if adam & (learning_rate>.01):
             print('Warning: Learning rate may be too high for ADAM optimizer to function properly')
        
@@ -46,7 +46,7 @@ class transformer(object):
         self.hidden_layer_activations = hidden_layer_activations
         self.hidden_layer_num_heads = hidden_layer_num_heads
         self.output_shape = output_shape
-        self.output_layer_activation = output_layer_activation
+        # self.output_layer_activation = output_layer_activation
         
         # hyperparameters
         self.epochs = epochs
@@ -55,7 +55,7 @@ class transformer(object):
         self.learning_rate = np.float32(learning_rate)
         self.loss_function = loss_function
         self.clip_val = np.float32(clip_val)
-        self.activations = hidden_layer_activations + [output_layer_activation]
+        self.activations = hidden_layer_activations# + [output_layer_activation]
 
         # loss
         # self.localLoss = []
@@ -101,7 +101,7 @@ class transformer(object):
         self.output_layer_norm = ln.layer_norm(output_layer_input_shape)
         self.output_layer = ff.neuron_layer(
               input_shape=output_layer_input_shape, output_shape=self.output_shape
-            , activation=self.output_layer_activation, batch_size=self.batch_size
+            , activation=None, batch_size=self.batch_size # activation is none so this returns the logits, we apply the activation later for gradients
             , clip_val=self.clip_val, learning_rate=self.learning_rate, adam=self.adam)
         
         # TODO: revisit dictionary/embeddings
@@ -123,7 +123,7 @@ class transformer(object):
 ####################################
 # Forward Pass #
 ####################################
-    def forward_pass(self, x, train=False):
+    def forward_pass(self, x, Y=None, train=False):
         # TODO: how this changes for train vs test
         # input layer
         batch_length = x.shape[-2]
@@ -138,20 +138,26 @@ class transformer(object):
         # final layer norm
         x = self.output_layer_norm.layer_norm(x)
 
-        # output layer
-        logits = self.output_layer.forward_pass(x)
-
         if train:
-            loss = caa.crossEntropyLoss(1, logits)
+            # output layer
+            logits = self.output_layer.forward_pass(x)
+
+            # flattening batches
+            logits_flat = logits.reshape(-1, logits.shape[-1])
+            Y_flat = Y.reshape(-1)
+            loss = caa.cross_entropy_loss(logits_flat, Y_flat)
         else:
+            # output layer
+            logits = self.output_layer.forward_pass(x[:, -1, :])
             loss = None
 
         return logits, loss
     
     def next_token_vocab_index(self, x):
+        # TODO: add "temperature" so we can sample the softmax
         logits, loss = self.forward_pass(x)
-        next_token_logits = logits[:, -1, :]
-        return np.argmax(next_token_logits, axis=1)
+        prob_dist = caa.activation('softmax', logits)
+        return np.argmax(prob_dist, axis=1), prob_dist
 
 ####################################
 # Backward Pass #
@@ -160,9 +166,12 @@ class transformer(object):
     def loss(self, Y, logits):
         pass
 
-    def backward_pass(self, loss):
-        # TODO: return to after I do the backwards pass for each
-        pass
+    def backward_pass(self, logits, Y, pad_token_ind=0):
+        dL_dZ_output = self.output_layer.backward_pass(logits, Y, pad_token_ind)
+        
+        return dL_dZ_output
+        # pass
+
         # dL_dZ_output = self.output_layer.backward_pass(loss)
 
 
