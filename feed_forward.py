@@ -24,6 +24,7 @@ class neuron_layer(object):
 
         # hidden state
         self.hidden_state = None
+        self.prev_layer_hidden_state = None
 
         # adam
         self.adam = adam
@@ -51,13 +52,14 @@ class neuron_layer(object):
             hidden_state = caa.activation(self.activation, x @ self.layer_weights + self.bias)
         if train:
             self.hidden_state = hidden_state
+            self.prev_layer_hidden_state = x
         return hidden_state
 
 ####################################
 # Backward Pass #
 ####################################
 
-    def backward_pass(self, logits, Y, pad_token_ind=0):
+    def backward_pass(self, dL_dY=None, logits=None, Y=None, pad_token_ind=0):
         # if this is an output layer
         # TODO: clean up so output layer is True/False not activation as none. also valid for forward_pass
         if self.activation==None:
@@ -74,13 +76,18 @@ class neuron_layer(object):
             # reshaping to pre-flattened shape
             dL_dZ_flat = np.zeros_like(logits_flat)
             dL_dZ_flat[mask] = dL_dZ_active
-
             dL_dZ = dL_dZ_flat.reshape(logits.shape)
-        # TODO: LEFT OFF HERE
+            dL_dY = dL_dZ @ self.layer_weights.T
+            # TODO: left off here - 'NoneType' object has no attribute 'T'
+            dL_dW = self.prev_layer_hidden_state.T @ dL_dZ
+            dL_db = np.sum(dL_dZ, axis=0)
         else:
-            dL_dZ = caa.loss_grad(self.activation, self.hidden_state, )
+            dL_dZ = caa.loss_grad(self.activation, self.hidden_state, dL_dY)
+            dL_dY = dL_dZ @ self.layer_weights.T
+            dL_dW = self.prev_layer_hidden_state.T @ dL_dZ
+            dL_db = np.sum(dL_dZ, axis=0)
 
-        return dL_dZ
+        return dL_dY, dL_dW, dL_db
         # return dL_dZ
 
     def update(self, num_steps):

@@ -61,29 +61,29 @@ def softmax_cross_entropy_grad(logits, Y_ind):
     # return prob
 
 # choosing activation
-def activation(activationName, z):
-    if activationName == 'relu':
+def activation(activation_name, z):
+    if activation_name == 'relu':
         return relu(z)
-    elif activationName =='sigmoid':
+    elif activation_name =='sigmoid':
         return sigmoid(z)
-    elif activationName == 'tanH':
+    elif activation_name == 'tanH':
         return tanH(z)
-    elif activationName == 'softmax':
+    elif activation_name == 'softmax':
         return softmax(z)
     else:
         raise Exception('Unknown activation function')
 
 # choosing gradient
-def loss_grad(activationName, hiddenState, dLdH):
-    if activationName == 'relu':
-        dHdZ = reluGradient(hiddenState)
-        loss_grad = dLdH * dHdZ
-    elif activationName == 'sigmoid':
-        dHdZ = sigmoidGradient(hiddenState)
-        loss_grad = dLdH * dHdZ
-    elif activationName == 'tanH':
-        dHdZ = tanHGradient(hiddenState)
-        loss_grad = dLdH * dHdZ
+def loss_grad(activation_name, hidden_state, dL_dY):
+    if activation_name == 'relu':
+        dY_dZ = reluGradient(hidden_state)
+        dL_dZ = dL_dY * dY_dZ
+    elif activation_name == 'sigmoid':
+        dY_dZ = sigmoidGradient(hidden_state)
+        dL_dZ = dL_dY * dY_dZ
+    elif activation_name == 'tanH':
+        dY_dZ = tanHGradient(hidden_state)
+        dL_dZ = dL_dY * dY_dZ
     # special case of softmax & cross entropy loss
     # TBD
-    return loss_grad
+    return dL_dZ

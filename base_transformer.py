@@ -167,9 +167,9 @@ class transformer(object):
         pass
 
     def backward_pass(self, logits, Y, pad_token_ind=0):
-        dL_dZ_output = self.output_layer.backward_pass(logits, Y, pad_token_ind)
+        dL_dY, dL_dW, dL_db = self.output_layer.backward_pass(logits=logits, Y=Y, pad_token_ind=pad_token_ind)
         
-        return dL_dZ_output
+        return dL_dY, dL_dW, dL_db
         # pass
 
         # dL_dZ_output = self.output_layer.backward_pass(loss)
