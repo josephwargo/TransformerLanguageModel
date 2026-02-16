@@ -40,16 +40,27 @@ class transformer_block(object):
 ####################################
 # Forward Pass #
 ####################################
-    def forward_pass(self, x):
+    def forward_pass(self, x, train=False):
         # first layer norm and attention masked self-attention and residual add
-        x = x + self.self_attention.multi_head_attention(self.layer_norm_1.layer_norm(x))
+        x = x + self.self_attention.multi_head_attention(self.layer_norm_1.forward_pass(x))
 
         # second layer norm & linear forward pass and residual add
-        x = x + self.feed_forward_layer.forward_pass(self.layer_norm_2.layer_norm(x))
+        x = x + self.feed_forward_layer.forward_pass(self.layer_norm_2.forward_pass(x), train)
 
         return x
 
 ####################################
 # Backward Pass #
 ####################################
-# TODO: Backward Pass
+    def backward_pass(self, dL_dY, pad_token_ind=0):
+        #TODO: Feed Forward backward pass
+        dL_dY, dL_dW, dL_db = self.feed_forward_layer.backward_pass(dL_dY, pad_token_ind=pad_token_ind)
+        
+        #TODO: Layer Norm backward pass
+
+        # TODO: attention backward pass
+        dL_dY, dL_dW, dL_db = self.self_attention.backward_pass()
+
+        #TODO: Layer Norm backward pass
+
+        return dL_dY, dL_dW, dL_db

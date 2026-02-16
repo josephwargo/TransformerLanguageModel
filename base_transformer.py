@@ -127,20 +127,20 @@ class transformer(object):
         # TODO: how this changes for train vs test
         # input layer
         batch_length = x.shape[-2]
-        x = self.positional_embeddings.forward_pass(x, batch_length)
+        x = self.positional_embeddings.forward_pass(x, batch_length, train)
         
-        x = self.input_layer.forward_pass(x)
+        x = self.input_layer.forward_pass(x, train)
 
         # transformer blocks
         for transformer_block in self.transformer_layers.values():
-            x = transformer_block.forward_pass(x)
+            x = transformer_block.forward_pass(x, train)
 
         # final layer norm
-        x = self.output_layer_norm.layer_norm(x)
+        x = self.output_layer_norm.forward_pass(x, train)
 
         if train:
             # output layer
-            logits = self.output_layer.forward_pass(x)
+            logits = self.output_layer.forward_pass(x, train)
 
             # flattening batches
             logits_flat = logits.reshape(-1, logits.shape[-1])
@@ -148,7 +148,7 @@ class transformer(object):
             loss = caa.cross_entropy_loss(logits_flat, Y_flat)
         else:
             # output layer
-            logits = self.output_layer.forward_pass(x[:, -1, :])
+            logits = self.output_layer.forward_pass(x[:, -1, :], train)
             loss = None
 
         return logits, loss
@@ -163,12 +163,25 @@ class transformer(object):
 # Backward Pass #
 ####################################
 
-    def loss(self, Y, logits):
-        pass
-
     def backward_pass(self, logits, Y, pad_token_ind=0):
+        # TODO: layer norms
+
         dL_dY, dL_dW, dL_db = self.output_layer.backward_pass(logits=logits, Y=Y, pad_token_ind=pad_token_ind)
+        # TODO: update weights and bias
+
+        # TODO: Transformer blocks
+        # reversing order of transformer dict for backwards pass
+        rev_transformer_layers = list(self.transformer_layers.keys())
+        rev_transformer_layers.reverse()
+        for layer_name in rev_transformer_layers:
+            transformer_block = self.transformer_layers[layer_name]
+            dL_dY, dL_dW, dL_db = transformer_block.backward_pass(dL_dY)
+            # TODO: update weights and bias
+
+        # TODO: input layer
+        # dL_dY, dL_dW, dL_db = self.input_layer.backward_pass(dL_dY=dL_dY, pad_token_ind=pad_token_ind)
         
+        # TODO: positional embeddings
         return dL_dY, dL_dW, dL_db
         # pass
 

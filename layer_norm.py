@@ -13,5 +13,5 @@ class layer_norm(object):
 
         return x_hat
     
-    def layer_norm(self, x):
+    def forward_pass(self, x, train=False):
         return self.gamma * self.x_hat(x) + self.beta
