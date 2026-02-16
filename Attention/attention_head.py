@@ -46,8 +46,6 @@ class attention_head(object):
         score_mask = np.tril(np.ones(shape=scaled_score_matrix.shape))
         masked_score = np.where(score_mask, scaled_score_matrix, -1e9)
 
-        
-
         #applying softmax
         softmax_masked_score = caa.softmax(masked_score)
 
