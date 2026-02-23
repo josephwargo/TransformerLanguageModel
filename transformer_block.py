@@ -5,14 +5,14 @@ import layer_norm as ln
 
 class transformer_block(object):
     def __init__(
-              self, num_heads, block_shape
+              self, num_heads, d_model
             , activation
             , batch_size, clip_val
             , learning_rate , adam=False
             ):
         
         self.num_heads = num_heads
-        self.block_shape = block_shape
+        self.d_model = d_model
         self.activation = activation
         self.batch_size = batch_size
         self.clip_val = clip_val
@@ -20,19 +20,19 @@ class transformer_block(object):
         self.adam = adam
 
         # first layer norm
-        self.layer_norm_1 = ln.layer_norm(self.block_shape)
+        self.layer_norm_1 = ln.layer_norm(self.d_model)
 
         # self-attention
         self.self_attention = ab.attention_block(
-              num_heads=num_heads, block_shape=self.block_shape
+              num_heads=num_heads, d_model=self.d_model
         )
 
         # second layer norm
-        self.layer_norm_2 = ln.layer_norm(self.block_shape)
+        self.layer_norm_2 = ln.layer_norm(self.d_model)
 
         # feed forward
         self.feed_forward_layer = ff.neuron_layer(
-              input_shape=self.block_shape, output_shape=self.block_shape, activation='relu'
+              input_shape=self.d_model, output_shape=self.d_model, activation='relu'
             , batch_size=self.batch_size, clip_val=self.clip_val, learning_rate=self.learning_rate
             , adam=self.adam
         )
@@ -42,7 +42,7 @@ class transformer_block(object):
 ####################################
     def forward_pass(self, x, train=False):
         # first layer norm and attention masked self-attention and residual add
-        x = x + self.self_attention.multi_head_attention(self.layer_norm_1.forward_pass(x))
+        x = x + self.self_attention.forward_pass(self.layer_norm_1.forward_pass(x), train)
 
         # second layer norm & linear forward pass and residual add
         x = x + self.feed_forward_layer.forward_pass(self.layer_norm_2.forward_pass(x), train)
@@ -59,7 +59,7 @@ class transformer_block(object):
         #TODO: Layer Norm backward pass
 
         # TODO: attention backward pass
-        dL_dY, dL_dW, dL_db = self.self_attention.backward_pass()
+        dL_dY, dL_dW, dL_db = self.self_attention.backward_pass(dL_dY)
 
         #TODO: Layer Norm backward pass
 

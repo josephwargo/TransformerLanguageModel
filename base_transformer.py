@@ -11,7 +11,7 @@ class transformer(object):
           self
         # , embeddings, word2ind
         , input_layer_shape, input_layer_activation
-        , hidden_layer_shapes, hidden_layer_activations
+        , d_model, hidden_layer_activations
         , hidden_layer_num_heads
         , output_shape
         # , output_layer_activation
@@ -23,8 +23,8 @@ class transformer(object):
         self.debug = debug
 
         # errors
-        if len(hidden_layer_shapes)!=len(hidden_layer_activations):
-            raise Exception('Length of hidden_layer_shapes does not match length of hidden_layer_activations')
+        # if len(hidden_layer_shapes)!=len(hidden_layer_activations):
+        #     raise Exception('Length of hidden_layer_shapes does not match length of hidden_layer_activations')
         # if ((loss_function=='cross_entropy_loss') & (output_layer_activation!='softmax')) or ((loss_function!='cross_entropy_loss') & (output_layer_activation=='softmax')):
         #     raise Exception('A cost function of Cross Entropy Loss and an output layer activation of Softmax must be paired with each other')
         if adam & (learning_rate>.01):
@@ -42,7 +42,7 @@ class transformer(object):
         # layer details
         self.input_layer_shape = input_layer_shape
         self.input_layer_activation = input_layer_activation
-        self.hidden_layer_shapes = hidden_layer_shapes
+        self.d_model = d_model
         self.hidden_layer_activations = hidden_layer_activations
         self.hidden_layer_num_heads = hidden_layer_num_heads
         self.output_shape = output_shape
@@ -72,7 +72,7 @@ class transformer(object):
         self.positional_embeddings = pe.positional_embedding(max_seq_len=1024, d_model=input_layer_shape)
 
         self.input_layer = ff.neuron_layer(
-              input_shape=self.input_layer_shape, output_shape=self.hidden_layer_shapes[0]
+              input_shape=self.input_layer_shape, output_shape=self.d_model
             , activation=self.input_layer_activation
             , batch_size=self.batch_size, clip_val=self.clip_val, learning_rate=self.learning_rate, adam=self.adam
         )
@@ -81,14 +81,11 @@ class transformer(object):
 # Init Transformer Blocks
 ####################################
         self.transformer_layers = {} # dictionary to hold all transformer layers
-        for layer_num, layer in enumerate(self.hidden_layer_shapes):
-            
-            layer_num_heads = hidden_layer_num_heads[layer_num]
-            layer_block_shape = self.hidden_layer_shapes[layer_num]
+        for layer_num, layer in enumerate(self.hidden_layer_activations):
             layer_activation = self.activations[layer_num]
 
             self.transformer_layers[f'transformer_layer_{layer_num}'] = tb.transformer_block(
-                  num_heads=layer_num_heads, block_shape=layer_block_shape
+                  num_heads=self.hidden_layer_num_heads, d_model=self.d_model
                 , activation=layer_activation
                 , batch_size=self.batch_size, clip_val=self.clip_val
                 , learning_rate=self.learning_rate , adam=self.adam
@@ -97,7 +94,7 @@ class transformer(object):
 ####################################
 # Init Output Layer #
 ####################################
-        output_layer_input_shape = self.hidden_layer_shapes[-1]
+        output_layer_input_shape = self.d_model
         self.output_layer_norm = ln.layer_norm(output_layer_input_shape)
         self.output_layer = ff.neuron_layer(
               input_shape=output_layer_input_shape, output_shape=self.output_shape
