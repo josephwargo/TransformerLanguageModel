@@ -10,7 +10,8 @@ class neuron_layer(object):
         self.input_shape = input_shape # length of vector that will be inputted into the weights
         self.output_shape = output_shape # desired length of weight output (and therefore layer output)
         layer_xavier = np.sqrt(2/(self.input_shape+self.output_shape)) # value used to determine optimal
-        self.layer_weights = np.random.normal(0,layer_xavier, size=(self.input_shape,self.output_shape)).astype(np.float32) # optimal weight initialization via xavier
+        # shape is (out_dim, in_dim) for hardware optimization. this is NOT untuitive
+        self.layer_weights = np.random.normal(0,layer_xavier, size=(self.output_shape, self.input_shape)).astype(np.float32)
 
         self.bias = np.zeros(shape=(output_shape)).astype(np.float32) # initializing bias as 0s - no xavier here
 
@@ -27,6 +28,7 @@ class neuron_layer(object):
         self.prev_layer_hidden_state = None
 
         # adam
+        # TODO: implement
         self.adam = adam
         if adam:
             # constants
@@ -47,9 +49,9 @@ class neuron_layer(object):
 ####################################
     def forward_pass(self, x, train=False):
         if self.activation==None:
-            hidden_state = x @ self.layer_weights + self.bias
+            hidden_state = x @ self.layer_weights.T + self.bias
         else:
-            hidden_state = caa.activation(self.activation, x @ self.layer_weights + self.bias)
+            hidden_state = caa.activation(self.activation, x @ self.layer_weights.T + self.bias)
         if train:
             self.hidden_state = hidden_state
             self.prev_layer_hidden_state = x

@@ -21,7 +21,7 @@ class attention_block(object):
         # weights to aggregate heads
         # initialization of weights - using only Xavier for now
         xavier_val = np.sqrt(2/(self.d_model+self.d_model))
-        self.W_o = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32)
+        self.W_o = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32) # does not matter whether in_dim or out_dim is first as both are d_model
 
         # hidden state
         self.hidden_state = None
@@ -34,7 +34,10 @@ class attention_block(object):
 
         # concatenating scores together and running through the weights to get desired output shape
         # concatenating by reshaping from (batch, seq_len, num_heads, head_shape) to (batch, seq_len, d_model)
-        head_attentions_concat = head_attention.reshape(x.shape[0], x.shape[1], self.d_model)
+        print(head_attention.shape)
+        # need to transpose so that the dimensions I am trying to combine ()
+        head_attention_transposed = head_attention.transpose(0,2,1,3)
+        head_attentions_concat = head_attention_transposed.reshape(x.shape[0], x.shape[1], self.d_model)
 
         # calculating final attention scores and returning
         attention_scores_concat = head_attentions_concat @ self.W_o
