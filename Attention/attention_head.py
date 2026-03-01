@@ -20,6 +20,9 @@ class attention_head(object):
         self.W_k = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32) # key weights
         self.W_v = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32) # value weights
 
+        # storing previous layer hidden state for backprop
+        self.prev_layer_hidden_state = None
+
         # initialization of q, k, and v vectors
         self.q = None
         self.k = None
@@ -28,25 +31,27 @@ class attention_head(object):
         # for storing during train forward pass
         self.softmax_masked_score = None
 
-    def calculate_q_k_v(self, x):
+    def calculate_q_k_v(self, x, train=False):
         # reshaping the output to be (batch, seq_len, num_heads, head_shape) as this is needed to calculate the attention score for different heads
         # will later reshape to (batch, seq_len, d_model) when we "concatenate" the separate heads in the attention block
         # doing the reshaping in two steps to avoid memory bug
-        q_proj = (x @ self.W_q).reshape(x.shape[0], x.shape[1], self.num_heads, self.head_dimension)
-        self.q = q_proj.transpose(0,1,2,3)
-        k_proj = (x @ self.W_k).reshape(x.shape[0], x.shape[1], self.num_heads, self.head_dimension)
-        self.k = k_proj.transpose(0,1,2,3)
-        v_proj = (x @ self.W_v).reshape(x.shape[0], x.shape[1], self.num_heads, self.head_dimension)
-        self.v = v_proj.transpose(0,1,2,3)
+        q_proj = (x @ self.W_q.T).reshape(x.shape[0], x.shape[1], self.num_heads, self.head_dimension)
+        self.q = q_proj.transpose(0,2,1,3)
+        k_proj = (x @ self.W_k.T).reshape(x.shape[0], x.shape[1], self.num_heads, self.head_dimension)
+        self.k = k_proj.transpose(0,2,1,3)
+        v_proj = (x @ self.W_v.T).reshape(x.shape[0], x.shape[1], self.num_heads, self.head_dimension)
+        self.v = v_proj.transpose(0,2,1,3)
+
+        # if train, storing x
+        if train:
+            self.prev_layer_hidden_state = x
 
     def forward_pass(self, x, train=False):
         # calculating q, k, and v
-        self.calculate_q_k_v(x)
-
-        k_T = self.k.transpose((0,1,3,2))
+        self.calculate_q_k_v(x, train)
 
         # calculating attention score & scaling
-        score_matrix = self.q @ k_T
+        score_matrix = self.q @ self.k.transpose(0,1,3,2)
         scaled_score_matrix = score_matrix / self.dim_sqrt
         
         # determining & applying the mask
@@ -56,7 +61,6 @@ class attention_head(object):
         #applying softmax
         softmax_masked_score = caa.softmax(masked_score)
 
-
         # applying attention score to values to "weight" each word by its respective attention
         masked_self_attention = softmax_masked_score @ self.v
         if train:
@@ -65,11 +69,42 @@ class attention_head(object):
     
     def backward_pass(self, dL_dY):
         dL_dv = self.softmax_masked_score @ dL_dY
-        print(dL_dv.shape)
+    
         # gradient w.r.t. softmax_masked_scores
+        dL_dY = self.v @ dL_dY.transpose(0,1,3,2)
+
+        # softmax gradient
+        dL_dZ = caa.softmax_grad(self.softmax_masked_score, dL_dY)
+        
+        # gradients for q and k
+        # "unscaling"
+        dL_dZ_unscaled = dL_dZ / self.dim_sqrt
+        # dot products
+        dL_dq = dL_dZ_unscaled @ self.k
+        dL_dk = dL_dZ_unscaled @ self.q
+
+        # gradients for W_q, W_k, and W_v
+        prev_layer_hidden_state_flat = self.prev_layer_hidden_state.reshape(-1, self.d_model)
+        dL_dq_flat = dL_dq.transpose(0,2,1,3).reshape(-1, self.d_model)
+        dL_dk_flat = dL_dk.transpose(0,2,1,3).reshape(-1, self.d_model)
+        dL_dv_flat = dL_dv.transpose(0,2,1,3).reshape(-1, self.d_model)
+
+        dL_dW_q = dL_dq_flat.T @ prev_layer_hidden_state_flat
+        dL_dW_k = dL_dk_flat.T @ prev_layer_hidden_state_flat
+        dL_dW_v = dL_dv_flat.T @ prev_layer_hidden_state_flat
+
+        # dL_dY output of the head - sum of dL_dY_q, dL_dY_k, and dL_dY_v
+        dL_dq_flat = dL_dq.transpose(0,2,1,3).reshape(dL_dq.shape[0], dL_dq.shape[2],  self.d_model)
+        dL_dY_q = dL_dq_flat @ self.W_q
+
+        dL_dk_flat = dL_dk.transpose(0,2,1,3).reshape(dL_dk.shape[0], dL_dk.shape[2],  self.d_model)
+        dL_dY_k = dL_dk_flat @ self.W_k
+
+        dL_dv_flat = dL_dv.transpose(0,2,1,3).reshape(dL_dv.shape[0], dL_dv.shape[2],  self.d_model)
+        dL_dY_v = dL_dv_flat @ self.W_v
+
+        dL_dY = dL_dY_q + dL_dY_k + dL_dY_v
+        
+        print(dL_dY.shape)
         print("here")
-        # print(self.softmax_masked_score.shape)
-        print(self.v.shape)
-        # print(dL_dY.shape)
-        dL_dY = self.v @ dL_dY
-        # print(dL_dY.shape)
+        return dL_dY

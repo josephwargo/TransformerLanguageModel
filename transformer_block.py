@@ -58,8 +58,8 @@ class transformer_block(object):
         
         #TODO: Layer Norm backward pass
 
-        # TODO: attention backward pass
-        dL_dY, dL_dW, dL_db = self.self_attention.backward_pass(dL_dY)
+        # attention backward pass
+        dL_dY = self.self_attention.backward_pass(dL_dY)
 
         #TODO: Layer Norm backward pass
 

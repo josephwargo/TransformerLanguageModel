@@ -40,8 +40,6 @@ def tanH(x):
 def tanHGradient(y):
     return 1 - y**2
 
-# no gradient function because this will only be paired with Cross Entropy Loss,
-# and they have a joint gradient function
 def softmax(logits):
     if len(logits.shape)>1:
         normalization = np.max(logits, axis=1, keepdims=True)
@@ -52,6 +50,10 @@ def softmax(logits):
         numerator = np.exp(logits - normalization)
         denominator = np.sum(numerator)
     return numerator / (denominator+1e-8)
+def softmax_grad(softmax_score, dL_dY):
+    dot_product_sum = np.sum(dL_dY * softmax_score, axis=-1, keepdims=True)
+    dL_dZ = softmax_score @ (dL_dY - dot_product_sum)
+    return dL_dZ
 
 # special gradient for softmax & cross entropy loss
 def softmax_cross_entropy_grad(logits, Y_ind):
