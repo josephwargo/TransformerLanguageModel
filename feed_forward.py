@@ -74,7 +74,6 @@ class neuron_layer(object):
             
             # grad for non-padded
             dL_dZ_active = caa.softmax_cross_entropy_grad(logits_flat_masked, Y_flat_masked)
-
             # reshaping to pre-flattened shape for dL_dZ
             dL_dZ_flat = np.zeros_like(logits_flat)
             dL_dZ_flat[mask] = dL_dZ_active
@@ -87,7 +86,7 @@ class neuron_layer(object):
             dL_dZ_flat = dL_dZ.reshape(-1, dL_dZ.shape[-1])
             
         # dL_dY
-        dL_dY = dL_dZ @ self.layer_weights.T
+        dL_dY = dL_dZ @ self.layer_weights
 
         # dL_dW - requries flattening the previous layer hidden state and using the flattened dL_dZ
         prev_layer_hidden_state_flat = self.prev_layer_hidden_state.reshape(-1, self.prev_layer_hidden_state.shape[-1])

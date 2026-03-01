@@ -125,9 +125,7 @@ class transformer(object):
         # input layer
         batch_length = x.shape[-2]
         x = self.positional_embeddings.forward_pass(x, batch_length, train)
-        
         x = self.input_layer.forward_pass(x, train)
-
         # transformer blocks
         for transformer_block in self.transformer_layers.values():
             x = transformer_block.forward_pass(x, train)
