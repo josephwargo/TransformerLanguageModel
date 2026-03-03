@@ -103,8 +103,7 @@ class attention_head(object):
         dL_dv_flat = dL_dv.transpose(0,2,1,3).reshape(dL_dv.shape[0], dL_dv.shape[2],  self.d_model)
         dL_dY_v = dL_dv_flat @ self.W_v
 
+        # taking the sume of all 3 to get the true dL_dY - this is mathmematically consistent with the chain rule
         dL_dY = dL_dY_q + dL_dY_k + dL_dY_v
         
-        print(dL_dY.shape)
-        print("here")
         return dL_dY
