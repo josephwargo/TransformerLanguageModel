@@ -94,8 +94,8 @@ class neuron_layer(object):
         
         # dL_db
         dL_db = np.sum(dL_dZ, axis=(0,1))
-
-        return dL_dY, dL_dW, dL_db
+        # TODO: make dL_dW and dL_db feed into the update
+        return dL_dY
         # return dL_dZ
 
     def update(self, num_steps):

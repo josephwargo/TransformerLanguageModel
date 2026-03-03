@@ -29,16 +29,15 @@ class attention_block(object):
         
     def forward_pass(self, x, train=False):
         # calculating the scores for each head
-        head_attention = self.head.forward_pass(x, train)
+        masked_self_attention = self.head.forward_pass(x, train)
 
         # concatenating scores together and running through the weights to get desired output shape
-        # concatenating by reshaping from (batch, seq_len, num_heads, head_shape) to (batch, seq_len, d_model)
-        # need to transpose so that the dimensions I am trying to combine ()
-        head_attention_transposed = head_attention.transpose(0,2,1,3)
-        head_attentions_concat = head_attention_transposed.reshape(x.shape[0], x.shape[1], self.d_model)
+        # concatenating by reshaping from (batch, num_heads, seq_len, head_shape) to (batch, seq_len, d_model)
+        masked_self_attention_transposed = masked_self_attention.transpose(0,2,1,3)
+        masked_self_attention_concat = masked_self_attention_transposed.reshape(x.shape[0], x.shape[1], self.d_model)
 
         # calculating final attention scores and returning
-        attention_scores_concat = head_attentions_concat @ self.W_o
+        attention_scores_concat = masked_self_attention_concat @ self.W_o
 
         if train:
             self.hidden_state = attention_scores_concat

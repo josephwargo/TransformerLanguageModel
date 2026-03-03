@@ -161,7 +161,7 @@ class transformer(object):
     def backward_pass(self, logits, Y, pad_token_ind=0):
         # TODO: layer norms
 
-        dL_dY, dL_dW, dL_db = self.output_layer.backward_pass(logits=logits, Y=Y, pad_token_ind=pad_token_ind)
+        dL_dY = self.output_layer.backward_pass(logits=logits, Y=Y, pad_token_ind=pad_token_ind)
         # TODO: update weights and bias
 
         # TODO: Transformer blocks
@@ -170,7 +170,7 @@ class transformer(object):
         rev_transformer_layers.reverse()
         for layer_name in rev_transformer_layers:
             transformer_block = self.transformer_layers[layer_name]
-            dL_dY, dL_dW, dL_db = transformer_block.backward_pass(dL_dY)
+            dL_dY = transformer_block.backward_pass(dL_dY)
             # TODO: update weights and bias
 
         # TODO: input layer

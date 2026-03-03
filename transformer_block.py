@@ -42,25 +42,29 @@ class transformer_block(object):
 ####################################
     def forward_pass(self, x, train=False):
         # first layer norm and attention masked self-attention and residual add
-        x = x + self.self_attention.forward_pass(self.layer_norm_1.forward_pass(x), train)
+        residual_with_self_attention = x + self.self_attention.forward_pass(self.layer_norm_1.forward_pass(x, train), train)
 
         # second layer norm & linear forward pass and residual add
-        x = x + self.feed_forward_layer.forward_pass(self.layer_norm_2.forward_pass(x), train)
+        transformer_block_output = residual_with_self_attention + self.feed_forward_layer.forward_pass(
+            self.layer_norm_2.forward_pass(residual_with_self_attention, train), train)
 
-        return x
+        return transformer_block_output
 
 ####################################
 # Backward Pass #
 ####################################
     def backward_pass(self, dL_dY, pad_token_ind=0):
         #TODO: Feed Forward backward pass
-        dL_dY, dL_dW, dL_db = self.feed_forward_layer.backward_pass(dL_dY, pad_token_ind=pad_token_ind)
+        dL_dY = self.feed_forward_layer.backward_pass(dL_dY, pad_token_ind=pad_token_ind)
         
         #TODO: Layer Norm backward pass
+        dL_dY = self.layer_norm_2.backward_pass(dL_dY)
 
         # attention backward pass
         dL_dY = self.self_attention.backward_pass(dL_dY)
 
         #TODO: Layer Norm backward pass
 
-        return dL_dY, dL_dW, dL_db
+        #TODO: make updates work for dL_dW, dL_db
+
+        return dL_dY
