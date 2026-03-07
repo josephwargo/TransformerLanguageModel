@@ -48,23 +48,39 @@ class transformer_block(object):
         transformer_block_output = residual_with_self_attention + self.feed_forward_layer.forward_pass(
             self.layer_norm_2.forward_pass(residual_with_self_attention, train), train)
 
+
+        # layer norm 1
+        # self attention
+        # residual add 1
+        # layer norm 2
+        # feed forward
+        # residual add 2
+
+
         return transformer_block_output
 
 ####################################
 # Backward Pass #
 ####################################
     def backward_pass(self, dL_dY, pad_token_ind=0):
-        #TODO: Feed Forward backward pass
-        dL_dY = self.feed_forward_layer.backward_pass(dL_dY, pad_token_ind=pad_token_ind)
+        #Feed Forward backward pass - will need to add before passing back again
+        dL_dFF = self.feed_forward_layer.backward_pass(dL_dY, pad_token_ind=pad_token_ind)
         
-        #TODO: Layer Norm backward pass
-        dL_dY = self.layer_norm_2.backward_pass(dL_dY)
+        #Layer Norm backward pass
+        dL_dLayer_norm_2 = self.layer_norm_2.backward_pass(dL_dFF)
+
+        # adding back for the residual stream - will need to add this gradient back in at the end
+        dL_dResid_add_2 = dL_dLayer_norm_2 + dL_dFF
 
         # attention backward pass
-        dL_dY = self.self_attention.backward_pass(dL_dY)
+        dL_dAttn = self.self_attention.backward_pass(dL_dResid_add_2)
 
-        #TODO: Layer Norm backward pass
+        # Layer Norm backward pass
+        dL_dLayer_norm_1 = self.layer_norm_1.backward_pass(dL_dAttn)
+
+        # adding in previously stored gradient 
+        dL_dRes_add_1 = dL_dResid_add_2 + dL_dLayer_norm_1
 
         #TODO: make updates work for dL_dW, dL_db
 
-        return dL_dY
+        return dL_dRes_add_1

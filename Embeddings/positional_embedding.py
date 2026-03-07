@@ -12,5 +12,10 @@ class positional_embedding(object):
         self.embeddings = np.random.normal(0, .02, size=(self.max_seq_len, d_model))
 
     def forward_pass(self, x, seq_len, train=False):
-        embeddings_slized = self.embeddings[:seq_len]
-        return x + embeddings_slized
+        embeddings_sliced = self.embeddings[:seq_len]
+        return x + embeddings_sliced
+    
+    def backward_pass(self, dL_dY):
+        dL_dembeddings = dL_dY
+
+        # TODO: Update embeddings based on gradient

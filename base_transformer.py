@@ -162,9 +162,9 @@ class transformer(object):
         # TODO: layer norms
 
         dL_dY = self.output_layer.backward_pass(logits=logits, Y=Y, pad_token_ind=pad_token_ind)
-        # TODO: update weights and bias
 
-        # TODO: Transformer blocks
+        dL_dY = self.output_layer_norm.backward_pass(dL_dY)
+
         # reversing order of transformer dict for backwards pass
         rev_transformer_layers = list(self.transformer_layers.keys())
         rev_transformer_layers.reverse()
@@ -173,107 +173,16 @@ class transformer(object):
             dL_dY = transformer_block.backward_pass(dL_dY)
             # TODO: update weights and bias
 
-        # TODO: input layer
-        # dL_dY, dL_dW, dL_db = self.input_layer.backward_pass(dL_dY=dL_dY, pad_token_ind=pad_token_ind)
-        
-        # TODO: positional embeddings
-        return dL_dY, dL_dW, dL_db
-        # pass
+        # input layer
+        dL_dY = self.input_layer.backward_pass(dL_dY=dL_dY, pad_token_ind=pad_token_ind)
 
-        # dL_dZ_output = self.output_layer.backward_pass(loss)
+        self.positional_embeddings.backward_pass(dL_dY)
+
+        print("here!!")
 
 
 
-
-    def backwardPassPerTimestep(self, layerLocalError, reverseKeys, timeStep):
-        # iterating through layers backwards
-        for layerNum, layer_name in enumerate(reverseKeys):
-            layerNum = len(reverseKeys) - 1 - layerNum
-            curr_layer = self.layers[layer_name]
-            
-            if layer_name == 'output_layer':
-                # dLossdZ [stored during forward pass]
-                dLossdZ = layerLocalError
-
-                # dLossdOutputWeights [dLdW] = dZdW [previous layer hidden state output] @ dLdZ [stored during forward pass]
-                prevLayerHiddenState = curr_layer.prev_layer_output_memory[timeStep]
-                dLossdOutputWeights = prevLayerHiddenState.T @ dLossdZ
-                # dLossdOutputWeights = dLossdOutputWeights.T
-                
-                # dLossdOutputBias [dLdB] = dLdZ [stored during forward pass] @ dZdB [1]
-                dLossdOutputBias = np.sum(layerLocalError, axis=0)
-
-                # dLossdPreviousHiddenLayer [dLdH] = dZdH [layerWeights] @ dLdZ [stored during forward pass]
-                dLossdPrevLayerHiddenState = curr_layer.layerWeights @ dLossdZ.T
-                
-                # updating localError to pass back
-                layerLocalError = dLossdPrevLayerHiddenState.T
-
-                # adding gradients to list for weight updates
-                curr_layer.layerWeightUpdates += dLossdOutputWeights
-                curr_layer.biasUpdates += dLossdOutputBias
-            
-            else:
-                # dLossdZ [dLdZ] = localError(dLdH [passed back from previous layer / time step], dHdZ [this layer hidden state most recent output])
-                dLdH = layerLocalError+curr_layer.thisLayerTimeLocalError
-                
-                hiddenState = curr_layer.thisLayerOutputMemory[timeStep]
-                
-                dLossdZ = caa.localError(curr_layer.activation, hiddenState, dLdH)
-                
-                # dLossdTimeWeights [dLdWt] = dLdZ [calculated above] @ dZdWt [prevTimeStepHiddenState]
-                prevTimeStepHiddenState = curr_layer.prevTimeStepOutputMemory[timeStep]
-                dLossdTimeWeights = prevTimeStepHiddenState.T @ dLossdZ
-                # dLossdTimeWeights = dLossdTimeWeights.T
-                
-                # dLossdLayerWeights [dLdWl] = dZdWl [prevLayerHiddenState] @ dLdZ [calculated above]
-                prevLayerHiddenState = curr_layer.prev_layer_output_memory[timeStep]
-                dLossdLayerWeights = prevLayerHiddenState.T @ dLossdZ
-                # dLossdLayerWeights = dLossdLayerWeights.T
-                
-                # dLossdOutputBias [dLdB] = dLdZ [calculated above] @ dZdB = [1]
-                dLossdOutputBias = np.sum(dLossdZ, axis=0)
-
-                # dLossdPreviousHiddenLayer [dLdH] = dZdH [layerWeights] @ dLdZ [calculated above]
-                layerLocalError = curr_layer.layerWeights @ dLossdZ.T
-                layerLocalError = layerLocalError.T
-                
-                # dLossdPreviousTimeStep [dLdH] = dZdH [timeWeights] @ dLdZ [calculated above]
-                curr_layer.thisLayerTimeLocalError = (curr_layer.timeWeights @ dLossdZ.T).T
-                
-                # adding gradients to list for weight updates
-                curr_layer.layerWeightUpdates += dLossdLayerWeights
-                curr_layer.timeWeightUpdates += dLossdTimeWeights
-                curr_layer.biasUpdates += dLossdOutputBias
-
-    # backward pass through entire text
-    def backwardPass(self):
-        numSteps = self.current_text.shape[1]
-        # reversing layers to iterate backwards through
-        reverseKeys = list(self.layers.keys())
-        reverseKeys.reverse()
-
-        # iterating through time backwards
-        for reverseTimeStep in range(1, numSteps):
-            timeStep = numSteps - reverseTimeStep - 1
-            
-            # getting proper local error that was stored during forward pass
-            layerLocalError = self.lossGradients[timeStep]
-
-            # NOT RELEVANT UNLESS WE WANT TO UPDATE EMBEDDINGS selecting proper input embeddings
-            # inputWord = text[timeStep]
-            # inputVocabIndex = self.word2ind[inputWord]
-            # inputWordEmbedding = self.embeddings[inputVocabIndex]
-
-            # backward pass for an individual time step
-            self.backwardPassPerTimestep(layerLocalError, reverseKeys, timeStep)
-        
-        # updating weights and biases
-        for layer_name in reverseKeys:
-            curr_layer = self.layers[layer_name]            
-            curr_layer.update(numSteps-1)
-
-    
+# old stuff - possible to reuse
     def resetGrads(self, train=True):
     # Resetting losses and gradients in advance of forward pass
         # setting/resetting loss

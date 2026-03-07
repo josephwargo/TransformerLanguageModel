@@ -54,13 +54,13 @@ class attention_block(object):
         dL_dW = dL_dZ_flat.T @ prev_layer_hidden_state_flat
         
         # dL_dY - dL_dZ = dL_dY because there is no activation
-        dL_dY = dL_dY @ self.W_o.T
+        dL_dAttn_score = dL_dY @ self.W_o.T
 
         # reshaping dL_dY to be 4d (batch, seq_len, num_heads, head_shape) so we can do matrix multiplication with k, q, and v in the backwards pass of the attention heads
-        new_dL_dY_shape_1 = (dL_dY.shape[0], self.num_heads, dL_dY.shape[1], self.head_output_dimension)
-        dL_dY_4d = dL_dY.reshape(new_dL_dY_shape_1)
+        dL_dAttn_score_shape = (dL_dAttn_score.shape[0], self.num_heads, dL_dAttn_score.shape[1], self.head_output_dimension)
+        dL_dAttn_score = dL_dAttn_score.reshape(dL_dAttn_score_shape)
         
-        # backward pass of the 
-        dL_dY = self.head.backward_pass(dL_dY_4d)
+        # backward pass of the attention head
+        dL_dAttn_Block = self.head.backward_pass(dL_dAttn_score)
 
-        return dL_dY
+        return dL_dAttn_Block

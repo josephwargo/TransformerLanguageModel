@@ -71,10 +71,10 @@ class attention_head(object):
         dL_dv = self.softmax_masked_score @ dL_dY
     
         # gradient w.r.t. softmax_masked_scores
-        dL_dY = self.v @ dL_dY.transpose(0,1,3,2)
+        dL_dMasked_scores = self.v @ dL_dY.transpose(0,1,3,2)
 
         # softmax gradient
-        dL_dZ = caa.softmax_grad(self.softmax_masked_score, dL_dY)
+        dL_dZ = caa.softmax_grad(self.softmax_masked_score, dL_dMasked_scores)
         
         # gradients for q and k
         # "unscaling"
@@ -95,15 +95,15 @@ class attention_head(object):
 
         # dL_dY output of the head - sum of dL_dY_q, dL_dY_k, and dL_dY_v
         dL_dq_flat = dL_dq.transpose(0,2,1,3).reshape(dL_dq.shape[0], dL_dq.shape[2],  self.d_model)
-        dL_dY_q = dL_dq_flat @ self.W_q
+        dL_dAttn_head_q = dL_dq_flat @ self.W_q
 
         dL_dk_flat = dL_dk.transpose(0,2,1,3).reshape(dL_dk.shape[0], dL_dk.shape[2],  self.d_model)
-        dL_dY_k = dL_dk_flat @ self.W_k
+        dL_dAttn_head_k = dL_dk_flat @ self.W_k
 
         dL_dv_flat = dL_dv.transpose(0,2,1,3).reshape(dL_dv.shape[0], dL_dv.shape[2],  self.d_model)
-        dL_dY_v = dL_dv_flat @ self.W_v
+        dL_dAttn_head_v = dL_dv_flat @ self.W_v
 
         # taking the sume of all 3 to get the true dL_dY - this is mathmematically consistent with the chain rule
-        dL_dY = dL_dY_q + dL_dY_k + dL_dY_v
+        dL_dAttn_head = dL_dAttn_head_q + dL_dAttn_head_k + dL_dAttn_head_v
         
-        return dL_dY
+        return dL_dAttn_head
