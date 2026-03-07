@@ -86,7 +86,7 @@ class neuron_layer(object):
             dL_dZ_flat = dL_dZ.reshape(-1, dL_dZ.shape[-1])
             
         # dL_dY
-        dL_dY = dL_dZ @ self.layer_weights
+        dL_dx = dL_dZ @ self.layer_weights
 
         # dL_dW - requries flattening the previous layer hidden state and using the flattened dL_dZ
         prev_layer_hidden_state_flat = self.prev_layer_hidden_state.reshape(-1, self.prev_layer_hidden_state.shape[-1])
@@ -95,7 +95,7 @@ class neuron_layer(object):
         # dL_db
         dL_db = np.sum(dL_dZ, axis=(0,1))
         # TODO: make dL_dW and dL_db feed into the update
-        return dL_dY
+        return dL_dx
         # return dL_dZ
 
     def update(self, num_steps):
