@@ -2,6 +2,9 @@ import numpy as np
 import Attention.attention_head as ah
 
 class attention_block(object):
+####################################
+# Initializations #
+####################################
     def __init__(self, num_heads, d_model):
         if d_model%num_heads != 0:
             raise Exception('Error: Attention Block input shape not divisible by number of heads.')
@@ -27,6 +30,9 @@ class attention_block(object):
         self.hidden_state = None
         self.prev_layer_hidden_state = None
         
+####################################
+# Forward Pass #
+####################################
     def forward_pass(self, x, train=False):
         # calculating the scores for each head
         masked_self_attention = self.head.forward_pass(x, train)
@@ -45,14 +51,17 @@ class attention_block(object):
 
         return attention_scores_concat
 
-    def backward_pass(self, dL_dY):
+####################################
+# Backward Pass #
+####################################
+    def backward_pass(self, learning_rate, dL_dY):
         # dL_dZ = dL_dY because there is no activation
         dL_dZ_flat = dL_dY.reshape(-1, dL_dY.shape[-1])
 
         # dL_dW for W_o
         prev_layer_hidden_state_flat = self.prev_layer_hidden_state.reshape(-1, self.prev_layer_hidden_state.shape[-1])
-        dL_dW = dL_dZ_flat.T @ prev_layer_hidden_state_flat
-        
+        dL_dW_o = dL_dZ_flat.T @ prev_layer_hidden_state_flat
+
         # dL_dY - dL_dZ = dL_dY because there is no activation
         dL_dAttn_score = dL_dY @ self.W_o.T
 
@@ -61,6 +70,11 @@ class attention_block(object):
         dL_dAttn_score = dL_dAttn_score.reshape(dL_dAttn_score_shape)
         
         # backward pass of the attention head
-        dL_dAttn_Block = self.head.backward_pass(dL_dAttn_score)
+        dL_dAttn_Block = self.head.backward_pass(learning_rate, dL_dAttn_score)
+
+        self.update(learning_rate, dL_dW_o)
 
         return dL_dAttn_Block
+
+    def update(self, learning_rate, dL_dW_o):
+        self.W_o += learning_rate * dL_dW_o

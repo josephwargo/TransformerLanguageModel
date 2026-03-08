@@ -3,8 +3,11 @@ import costs_and_activations as caa
 
 
 class neuron_layer(object):
+####################################
+# Initializations #
+####################################
     def __init__(self, input_shape, output_shape, activation, batch_size,
-                 clip_val, learning_rate, adam=False):
+                 clip_val, adam=False):
 
         # layer info 
         self.input_shape = input_shape # length of vector that will be inputted into the weights
@@ -21,7 +24,6 @@ class neuron_layer(object):
         # hyperparameters
         self.batch_size = batch_size # number of instances per training run
         self.clip_val = clip_val # used to set the upper and lower bounds for what we will let weight updates hit
-        self.learning_rate = learning_rate # value we multiply by the weight updates given to us via gradient descent
 
         # hidden state
         self.hidden_state = None
@@ -60,8 +62,7 @@ class neuron_layer(object):
 ####################################
 # Backward Pass #
 ####################################
-
-    def backward_pass(self, dL_dY=None, logits=None, Y=None, pad_token_ind=0):
+    def backward_pass(self, learning_rate, dL_dY=None, logits=None, Y=None, pad_token_ind=0):
         # TODO: clean up so output layer is True/False not activation as none. also valid for forward_pass
         # output layer that requries softmax & cross entropy loss combined gradient func
         if self.activation==None:
@@ -94,27 +95,23 @@ class neuron_layer(object):
         
         # dL_db
         dL_db = np.sum(dL_dZ, axis=(0,1))
-        # TODO: make dL_dW and dL_db feed into the update
+        
+        self.update(learning_rate, dL_dW, dL_db)
+
         return dL_dx
-        # return dL_dZ
 
-    def update(self, num_steps):
-
-        # normalizing
-        self.layer_weight_updates /= num_steps
-        self.bias_updates /= num_steps
-
+    def update(self, learning_rate, dL_dW, dL_db):
         # clipping
-        np.clip(self.layer_weight_updates, -self.clip_val, self.clip_val, out=self.layer_weight_updates)
-        np.clip(self.bias_updates, -self.clip_val, self.clip_val, out=self.bias_updates)
+        # np.clip(self.layer_weight_updates, -self.clip_val, self.clip_val, out=self.layer_weight_updates)
+        # np.clip(self.bias_updates, -self.clip_val, self.clip_val, out=self.bias_updates)
 
         # adam
         if self.adam:
             self.update_adam()
         
         else:
-            self.layer_weights += -self.learning_rate*self.layer_weight_updates
-            self.bias += -self.learning_rate*self.bias_updates
+            self.layer_weights += learning_rate * dL_dW
+            self.bias += learning_rate * dL_db
 
 
     def update_adam(self):
