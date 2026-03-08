@@ -1,6 +1,9 @@
 import numpy as np
 
 class layer_norm(object):
+####################################
+# Initializations #
+####################################
     def __init__(self, input_size):
         self.gamma = np.ones(shape=input_size)
         self.beta = np.zeros(shape=input_size)
@@ -9,6 +12,9 @@ class layer_norm(object):
         self.x_std_dev = None
         self.x_hat_val = None
 
+####################################
+# Forward Pass #
+####################################
     def x_hat(self, x, train=False):
         if train:
             self.prev_layer_hidden_state = x
@@ -30,8 +36,11 @@ class layer_norm(object):
         layer_normed = self.gamma * self.x_hat_val + self.beta
         
         return layer_normed
-    
-    def backward_pass(self, dL_dY):
+
+####################################
+# Backward Pass #
+####################################    
+    def backward_pass(self, learning_rate, dL_dY):
         
         # gradients to update gamma and beta
         # dL_dgamma = (dL_dY.transpose(0,2,1) @ self.x_hat_val).sum(axis=(0,1))
@@ -48,4 +57,10 @@ class layer_norm(object):
 
         dL_dX = (dL_dx_hat_d_model - dL_dx_hat_sum - dL_dx_hat_x_sum_x) / (self.x_std_dev * dL_dY.shape[-1])
         
+        self.update(learning_rate, dL_dgamma, dL_dbeta)
+
         return dL_dX
+
+    def update(self, learning_rate, dL_dgamma, dL_dbeta):
+        self.gamma += learning_rate * dL_dgamma
+        self.beta += learning_rate * dL_dbeta

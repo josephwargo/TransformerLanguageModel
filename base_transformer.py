@@ -7,6 +7,9 @@ import transformer_block as tb
 
 # entire net
 class transformer(object):
+####################################
+# Initial Initializations #
+####################################
     def __init__(
           self
         # , embeddings, word2ind
@@ -74,7 +77,7 @@ class transformer(object):
         self.input_layer = ff.neuron_layer(
               input_shape=self.input_layer_shape, output_shape=self.d_model
             , activation=self.input_layer_activation
-            , batch_size=self.batch_size, clip_val=self.clip_val, learning_rate=self.learning_rate, adam=self.adam
+            , batch_size=self.batch_size, clip_val=self.clip_val, adam=self.adam
         )
 
 ####################################
@@ -88,7 +91,7 @@ class transformer(object):
                   num_heads=self.hidden_layer_num_heads, d_model=self.d_model
                 , activation=layer_activation
                 , batch_size=self.batch_size, clip_val=self.clip_val
-                , learning_rate=self.learning_rate , adam=self.adam
+                , adam=self.adam
             )
 
 ####################################
@@ -99,7 +102,7 @@ class transformer(object):
         self.output_layer = ff.neuron_layer(
               input_shape=output_layer_input_shape, output_shape=self.output_shape
             , activation=None, batch_size=self.batch_size # activation is none so this returns the logits, we apply the activation later for gradients
-            , clip_val=self.clip_val, learning_rate=self.learning_rate, adam=self.adam)
+            , clip_val=self.clip_val, adam=self.adam)
         
         # TODO: revisit dictionary/embeddings
         # self.current_text = None
@@ -161,22 +164,22 @@ class transformer(object):
     def backward_pass(self, logits, Y, pad_token_ind=0):
         # TODO: layer norms
 
-        dL_dY = self.output_layer.backward_pass(logits=logits, Y=Y, pad_token_ind=pad_token_ind)
+        dL_dY = self.output_layer.backward_pass(self.learning_rate, logits=logits, Y=Y, pad_token_ind=pad_token_ind)
 
-        dL_dY = self.output_layer_norm.backward_pass(dL_dY)
+        dL_dY = self.output_layer_norm.backward_pass(self.learning_rate, dL_dY)
 
         # reversing order of transformer dict for backwards pass
         rev_transformer_layers = list(self.transformer_layers.keys())
         rev_transformer_layers.reverse()
         for layer_name in rev_transformer_layers:
             transformer_block = self.transformer_layers[layer_name]
-            dL_dY = transformer_block.backward_pass(dL_dY)
+            dL_dY = transformer_block.backward_pass(self.learning_rate, dL_dY)
             # TODO: update weights and bias
 
         # input layer
-        dL_dY = self.input_layer.backward_pass(dL_dY=dL_dY, pad_token_ind=pad_token_ind)
+        dL_dY = self.input_layer.backward_pass(self.learning_rate, dL_dY=dL_dY, pad_token_ind=pad_token_ind)
 
-        self.positional_embeddings.backward_pass(dL_dY)
+        self.positional_embeddings.backward_pass(self.learning_rate, dL_dY)
 
         print("here!!")
 

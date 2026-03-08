@@ -2,6 +2,9 @@ import numpy as np
 
 
 class positional_embedding(object):
+####################################
+# Initializations #
+####################################
     def __init__(
             self, max_seq_len, d_model
         ):
@@ -11,11 +14,20 @@ class positional_embedding(object):
 
         self.embeddings = np.random.normal(0, .02, size=(self.max_seq_len, d_model))
 
+####################################
+# Forward Pass #
+####################################
     def forward_pass(self, x, seq_len, train=False):
         embeddings_sliced = self.embeddings[:seq_len]
         return x + embeddings_sliced
-    
-    def backward_pass(self, dL_dY):
-        dL_dembeddings = dL_dY
 
-        # TODO: Update embeddings based on gradient
+####################################
+# Backward Pass #
+####################################
+    def backward_pass(self, learning_rate, dL_dY):
+        dL_dE = dL_dY
+        # self.update(learning_rate, dL_dE)
+
+    
+    def update(self, learning_rate, dL_dE):
+        self.embeddings += learning_rate * dL_dE

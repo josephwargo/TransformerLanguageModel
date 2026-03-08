@@ -2,6 +2,9 @@ import numpy as np
 import costs_and_activations as caa
 
 class attention_head(object):
+####################################
+# Initializations #
+####################################
     def __init__(self, num_heads, d_model):
         
         # storing dimensions
@@ -31,6 +34,9 @@ class attention_head(object):
         # for storing during train forward pass
         self.softmax_masked_score = None
 
+####################################
+# Forward Pass #
+####################################
     def calculate_q_k_v(self, x, train=False):
         # reshaping the output to be (batch, seq_len, num_heads, head_shape) as this is needed to calculate the attention score for different heads
         # will later reshape to (batch, seq_len, d_model) when we "concatenate" the separate heads in the attention block
@@ -66,8 +72,11 @@ class attention_head(object):
         if train:
             self.softmax_masked_score = softmax_masked_score
         return masked_self_attention
-    
-    def backward_pass(self, dL_dY):
+
+####################################
+# Backward Pass #
+####################################    
+    def backward_pass(self, learning_rate, dL_dY):
         dL_dv = self.softmax_masked_score @ dL_dY
     
         # gradient w.r.t. softmax_masked_scores
@@ -106,4 +115,11 @@ class attention_head(object):
         # taking the sume of all 3 to get the true dL_dY - this is mathmematically consistent with the chain rule
         dL_dAttn_head = dL_dAttn_head_q + dL_dAttn_head_k + dL_dAttn_head_v
         
+        self.update(learning_rate, dL_dW_q, dL_dW_k, dL_dW_v)
+
         return dL_dAttn_head
+
+    def update(self, learning_rate, dL_dW_q, dL_dW_k, dL_dW_v):
+        self.W_q += learning_rate * dL_dW_q
+        self.W_k += learning_rate * dL_dW_k
+        self.W_v += learning_rate * dL_dW_v
