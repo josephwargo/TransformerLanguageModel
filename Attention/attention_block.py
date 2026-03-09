@@ -77,4 +77,4 @@ class attention_block(object):
         return dL_dAttn_Block
 
     def update(self, learning_rate, dL_dW_o):
-        self.W_o += learning_rate * dL_dW_o
+        self.W_o += -learning_rate * dL_dW_o

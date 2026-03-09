@@ -19,7 +19,6 @@ def cross_entropy_loss(logits, Y_ind):
     # geting the log probability
     true_val_logits = logits[np.arange(logits.shape[0]), Y_ind][:, None]
     log_prob = log_sum_exp - true_val_logits
-
     return log_prob.mean()
 
 # functions to compute activation and gradient of activations
