@@ -110,8 +110,8 @@ class neuron_layer(object):
             self.update_adam()
         
         else:
-            self.layer_weights += learning_rate * dL_dW
-            self.bias += learning_rate * dL_db
+            self.layer_weights += -learning_rate * dL_dW
+            self.bias += -learning_rate * dL_db
 
 
     def update_adam(self):

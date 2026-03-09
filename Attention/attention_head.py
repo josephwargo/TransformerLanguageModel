@@ -120,6 +120,6 @@ class attention_head(object):
         return dL_dAttn_head
 
     def update(self, learning_rate, dL_dW_q, dL_dW_k, dL_dW_v):
-        self.W_q += learning_rate * dL_dW_q
-        self.W_k += learning_rate * dL_dW_k
-        self.W_v += learning_rate * dL_dW_v
+        self.W_q += -learning_rate * dL_dW_q
+        self.W_k += -learning_rate * dL_dW_k
+        self.W_v += -learning_rate * dL_dW_v

@@ -62,5 +62,5 @@ class layer_norm(object):
         return dL_dX
 
     def update(self, learning_rate, dL_dgamma, dL_dbeta):
-        self.gamma += learning_rate * dL_dgamma
-        self.beta += learning_rate * dL_dbeta
+        self.gamma += -learning_rate * dL_dgamma
+        self.beta += -learning_rate * dL_dbeta

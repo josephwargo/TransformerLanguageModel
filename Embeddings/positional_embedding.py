@@ -6,13 +6,13 @@ class positional_embedding(object):
 # Initializations #
 ####################################
     def __init__(
-            self, max_seq_len, d_model
+            self, max_seq_len, input_layer_shape
         ):
         
         self.max_seq_len = max_seq_len
-        self.d_model = d_model
+        self.input_layer_shape = input_layer_shape
 
-        self.embeddings = np.random.normal(0, .02, size=(self.max_seq_len, d_model))
+        self.embeddings = np.random.normal(0, .02, size=(self.max_seq_len, input_layer_shape))
 
 ####################################
 # Forward Pass #
@@ -26,8 +26,14 @@ class positional_embedding(object):
 ####################################
     def backward_pass(self, learning_rate, dL_dY):
         dL_dE = dL_dY
-        # self.update(learning_rate, dL_dE)
+        self.update(learning_rate, dL_dE)
 
     
     def update(self, learning_rate, dL_dE):
-        self.embeddings += learning_rate * dL_dE
+        pad_to_add = self.max_seq_len - dL_dE.shape[1]
+        dL_dE_padded = np.sum(
+              np.pad(dL_dE, ((0,0), (0,pad_to_add), (0,0)), mode='constant', constant_values=0)
+            , axis=0
+        )
+        
+        self.embeddings += -learning_rate * dL_dE_padded
