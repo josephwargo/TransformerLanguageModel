@@ -182,82 +182,18 @@ class transformer(object):
         self.positional_embeddings.backward_pass(self.learning_rate, dL_dY)
 
 
+####################################
+# Training #
+####################################
+    def train(self, x_batches, Y_batches, num_batches):
+        for batch_num in range(num_batches):
+            x_batch = x_batches[batch_num]
+            Y_batch = Y_batches[batch_num]
+            # forward pass
+            batch_output = self.forward_pass(x_batch, Y_batch, train=True)
+            logits = batch_output[0]
+            loss = batch_output[1]
+            print(f"Loss: {loss}")
 
-# old stuff - possible to reuse
-    def resetGrads(self, train=True):
-    # Resetting losses and gradients in advance of forward pass
-        # setting/resetting loss
-        self.localLoss = [] # list to store the local loss to average at the end
-        self.lossGradients = [] # list used to store loss gradients for backwards pass
-                                # resetting list to empty so we only store gradients from this
-                                # instance of the forward pass
-        
-        # setting/resetting gradients & other stored variables per layer
-        for layer_name in self.layers.keys():
-            curr_layer = self.layers[layer_name] # layer
-
-            # for forward pass calculation
-            # curr_layer.thisLayerMostRecentOutput = np.zeros(shape=curr_layer.thisLayerMostRecentOutput.shape).astype(np.float32)
-            if train:
-                curr_layer.thisLayerMostRecentOutput = np.zeros_like(curr_layer.thisLayerMostRecentOutput).astype(np.float32) # hidden state at time 0
-            else:
-                curr_layer.thisLayerMostRecentOutput = np.zeros(size=(curr_layer.outputShape))
-            # for backward pass calculation
-            curr_layer.prev_layer_output_memory = [] # memory of hidden states from the previous layer in  this timestep
-            if curr_layer.rnn:
-                curr_layer.prevTimeStepOutputMemory = [] # memory of hidden states from this layer in the previous timestep
-            curr_layer.thisLayerOutputMemory = [] # memory of the output from this layer
-
-            # for gradient updates
-            curr_layer.thisLayerTimeLocalError = np.zeros(shape=(curr_layer.thisLayerTimeLocalError.shape)).astype(np.float32)
-            if curr_layer.rnn:
-                curr_layer.timeWeightUpdates = np.zeros_like(curr_layer.timeWeights).astype(np.float32)
-            curr_layer.layerWeightUpdates = np.zeros_like(curr_layer.layerWeights).astype(np.float32)
-            curr_layer.biasUpdates = np.zeros_like(curr_layer.bias).astype(np.float32)
-
-    # training model by repeatedly running forward and backward passes
-    def trainModel(self, corpus):
-        remainder = len(corpus) % self.batch_size
-        if remainder != 0:
-            corpus = corpus[:-remainder]
-        for count, startIndex in enumerate(range(0, len(corpus), self.batch_size)):
-            stopIndex = startIndex + self.batch_size
-            batch = corpus[startIndex:stopIndex]
-            maxWordCount = max(len(text) for text in batch)
-            print(f'Batch #{count+1} - max {maxWordCount} words')
-            
-            self.trainBatch(batch)
-    
-    def trainBatch(self, batch):
-        # resetting gradients
-        self.resetGrads()
-
-        # forward pass
-        _ = self.forwardPass(batch)
-        modelLoss = self.loss[-1]
-        print(f'Loss: {modelLoss}')
-        print('********************************************')
-        print()
-
-        # backward pass
-        self.backwardPass()
-    
-    # return predicted output for a given input
-    def querySequence(self, sequence):
-        # getting logits
-        logits = self.forwardPass(sequence, train=False)
-        
-        # determining output word
-        outputWordIndex = np.argmax(logits)
-        outputWord = list(self.word2ind.keys())[outputWordIndex]
-
-        return outputWord
-    
-
-    def generateOutput(self, sequence, numWords):
-        self.resetGrads()
-        for i in range(numWords):
-            nextWord = self.querySequence(sequence)
-            sequence.append(nextWord)
-        
-        return sequence
+            # backward pass
+            dL_dY = self.backward_pass(logits=logits, Y=Y_batch)
