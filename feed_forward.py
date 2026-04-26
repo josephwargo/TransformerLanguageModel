@@ -6,7 +6,7 @@ class neuron_layer(object):
 ####################################
 # Initializations #
 ####################################
-    def __init__(self, input_shape, output_shape, activation, batch_size,
+    def __init__(self, input_shape, output_shape, activation,
                  clip_val, adam=False):
 
         # layer info 
@@ -22,7 +22,6 @@ class neuron_layer(object):
         self.activation = activation # activation function that will be applied to the output of the weights
 
         # hyperparameters
-        self.batch_size = batch_size # number of instances per training run
         self.clip_val = clip_val # used to set the upper and lower bounds for what we will let weight updates hit
 
         # hidden state
@@ -86,7 +85,7 @@ class neuron_layer(object):
             dL_dZ = caa.loss_grad(self.activation, self.hidden_state, dL_dY)
             dL_dZ_flat = dL_dZ.reshape(-1, dL_dZ.shape[-1])
             
-        # dL_dY
+        # dL_dx
         dL_dx = dL_dZ @ self.layer_weights
 
         # dL_dW - requries flattening the previous layer hidden state and using the flattened dL_dZ
@@ -95,12 +94,18 @@ class neuron_layer(object):
         
         # dL_db
         dL_db = np.sum(dL_dZ, axis=(0,1))
+
+        # determining batch size so we can scale the gradients - but need to make sure there are actual batches first!
+        if len(dL_dx.shape) < 3:
+            batch_size = 1
+        else:
+            batch_size = dL_dx.shape[0]
         
-        self.update(learning_rate, dL_dW, dL_db)
+        self.update(learning_rate, dL_dW, dL_db, batch_size)
 
         return dL_dx
 
-    def update(self, learning_rate, dL_dW, dL_db):
+    def update(self, learning_rate, dL_dW, dL_db, batch_size):
         # clipping
         # np.clip(self.layer_weight_updates, -self.clip_val, self.clip_val, out=self.layer_weight_updates)
         # np.clip(self.bias_updates, -self.clip_val, self.clip_val, out=self.bias_updates)
@@ -110,10 +115,10 @@ class neuron_layer(object):
             self.update_adam()
         
         else:
-            self.layer_weights += -learning_rate * dL_dW
-            self.bias += -learning_rate * dL_db
+            self.layer_weights += -learning_rate * (dL_dW / batch_size)
+            self.bias += -learning_rate * (dL_db / batch_size)
 
-
+    # TODO: update update_adam - this is leftover from RNN
     def update_adam(self):
         
         # doing ^t on beta1 and beta2 once per step

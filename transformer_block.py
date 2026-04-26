@@ -10,14 +10,13 @@ class transformer_block(object):
     def __init__(
               self, num_heads, d_model
             , activation
-            , batch_size, clip_val
+            , clip_val
             , adam=False
             ):
         
         self.num_heads = num_heads
         self.d_model = d_model
         self.activation = activation
-        self.batch_size = batch_size
         self.clip_val = clip_val
         self.adam = adam
 
@@ -35,7 +34,7 @@ class transformer_block(object):
         # feed forward
         self.feed_forward_layer = ff.neuron_layer(
               input_shape=self.d_model, output_shape=self.d_model, activation='relu'
-            , batch_size=self.batch_size, clip_val=self.clip_val
+            , clip_val=self.clip_val
             , adam=self.adam
         )
 
@@ -47,8 +46,12 @@ class transformer_block(object):
         residual_with_self_attention = x + self.self_attention.forward_pass(self.layer_norm_1.forward_pass(x, train), train)
 
         # second layer norm & linear forward pass and residual add
+        
         transformer_block_output = residual_with_self_attention + self.feed_forward_layer.forward_pass(
             self.layer_norm_2.forward_pass(residual_with_self_attention, train), train)
+
+        print("here")
+        print(transformer_block_output.shape)
 
         return transformer_block_output
 

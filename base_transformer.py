@@ -26,10 +26,6 @@ class transformer(object):
         self.debug = debug
 
         # errors
-        # if len(hidden_layer_shapes)!=len(hidden_layer_activations):
-        #     raise Exception('Length of hidden_layer_shapes does not match length of hidden_layer_activations')
-        # if ((loss_function=='cross_entropy_loss') & (output_layer_activation!='softmax')) or ((loss_function!='cross_entropy_loss') & (output_layer_activation=='softmax')):
-        #     raise Exception('A cost function of Cross Entropy Loss and an output layer activation of Softmax must be paired with each other')
         if adam & (learning_rate>.01):
             print('Warning: Learning rate may be too high for ADAM optimizer to function properly')
        
@@ -77,7 +73,7 @@ class transformer(object):
         self.input_layer = ff.neuron_layer(
               input_shape=self.input_layer_shape, output_shape=self.d_model
             , activation=self.input_layer_activation
-            , batch_size=self.batch_size, clip_val=self.clip_val, adam=self.adam
+            , clip_val=self.clip_val, adam=self.adam
         )
 
 ####################################
@@ -90,7 +86,7 @@ class transformer(object):
             self.transformer_layers[f'transformer_layer_{layer_num}'] = tb.transformer_block(
                   num_heads=self.hidden_layer_num_heads, d_model=self.d_model
                 , activation=layer_activation
-                , batch_size=self.batch_size, clip_val=self.clip_val
+                , clip_val=self.clip_val
                 , adam=self.adam
             )
 
@@ -101,7 +97,7 @@ class transformer(object):
         self.output_layer_norm = ln.layer_norm(output_layer_input_shape)
         self.output_layer = ff.neuron_layer(
               input_shape=output_layer_input_shape, output_shape=self.output_shape
-            , activation=None, batch_size=self.batch_size # activation is none so this returns the logits, we apply the activation later for gradients
+            , activation=None # activation is none so this returns the logits, we apply the activation later for gradients
             , clip_val=self.clip_val, adam=self.adam)
         
         # TODO: revisit dictionary/embeddings
@@ -162,7 +158,6 @@ class transformer(object):
 ####################################
 
     def backward_pass(self, logits, Y, pad_token_ind=0):
-        # TODO: layer norms
 
         dL_dY = self.output_layer.backward_pass(self.learning_rate, logits=logits, Y=Y, pad_token_ind=pad_token_ind)
 
@@ -174,7 +169,6 @@ class transformer(object):
         for layer_name in rev_transformer_layers:
             transformer_block = self.transformer_layers[layer_name]
             dL_dY = transformer_block.backward_pass(self.learning_rate, dL_dY)
-            # TODO: update weights and bias
 
         # input layer
         dL_dY = self.input_layer.backward_pass(self.learning_rate, dL_dY=dL_dY, pad_token_ind=pad_token_ind)
@@ -193,6 +187,7 @@ class transformer(object):
             batch_output = self.forward_pass(x_batch, Y_batch, train=True)
             logits = batch_output[0]
             loss = batch_output[1]
+            
             print(f"Loss: {loss}")
 
             # backward pass
