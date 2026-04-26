@@ -10,11 +10,10 @@ def MSEgradient(y, y_pred):
 def cross_entropy_loss(logits, Y_ind):
     # determining maxes to normalize
     max_logits = logits.max(axis=1, keepdims=True)
-
     # using log sum exp trick
     norm_exp = np.exp(logits - max_logits)
     sum_norm_exp = norm_exp.sum(axis=1, keepdims=True)
-    log_sum_exp = max_logits + np.log(sum_norm_exp+1e-12)
+    log_sum_exp = max_logits + np.log(sum_norm_exp)
 
     # geting the log probability
     true_val_logits = logits[np.arange(logits.shape[0]), Y_ind][:, None]

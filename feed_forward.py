@@ -7,7 +7,7 @@ class neuron_layer(object):
 # Initializations #
 ####################################
     def __init__(self, input_shape, output_shape, activation,
-                 clip_val, adam=False):
+                 clip_val, is_output_layer=False, adam=False):
 
         # layer info 
         self.input_shape = input_shape # length of vector that will be inputted into the weights
@@ -27,6 +27,9 @@ class neuron_layer(object):
         # hidden state
         self.hidden_state = None
         self.prev_layer_hidden_state = None
+
+        # type of layer
+        self.is_output_layer = is_output_layer
 
         # adam
         # TODO: implement
@@ -49,10 +52,13 @@ class neuron_layer(object):
 # Forward Pass #
 ####################################
     def forward_pass(self, x, train=False):
-        if self.activation==None:
+        # if it is an output layer - no activation
+        if self.is_output_layer:
             hidden_state = x @ self.layer_weights.T + self.bias
+        # an other layer - yes activation
         else:
             hidden_state = caa.activation(self.activation, x @ self.layer_weights.T + self.bias)
+        
         if train:
             self.hidden_state = hidden_state
             self.prev_layer_hidden_state = x
@@ -62,9 +68,9 @@ class neuron_layer(object):
 # Backward Pass #
 ####################################
     def backward_pass(self, learning_rate, dL_dY=None, logits=None, Y=None, pad_token_ind=0):
-        # TODO: clean up so output layer is True/False not activation as none. also valid for forward_pass
-        # output layer that requries softmax & cross entropy loss combined gradient func
-        if self.activation==None:
+
+        if self.is_output_layer:
+            
             # flattening and masking logits and Y
             Y_flat = Y.reshape(-1)
             mask = (Y_flat != pad_token_ind)
@@ -73,13 +79,14 @@ class neuron_layer(object):
             logits_flat_masked = logits_flat[mask]
             
             # grad for non-padded
+            print(logits_flat_masked.shape)
             dL_dZ_active = caa.softmax_cross_entropy_grad(logits_flat_masked, Y_flat_masked)
             # reshaping to pre-flattened shape for dL_dZ
             dL_dZ_flat = np.zeros_like(logits_flat)
             dL_dZ_flat[mask] = dL_dZ_active
             dL_dZ = dL_dZ_flat.reshape(logits.shape)
         
-        # not an output layer
+        # any other layer
         else:
             # calculating and flatting dL_dZ
             dL_dZ = caa.loss_grad(self.activation, self.hidden_state, dL_dY)

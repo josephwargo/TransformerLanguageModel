@@ -69,7 +69,6 @@ class transformer(object):
 ####################################
         # TODO: make max_seq_len a thing, and update this after making d_model a thing
         self.positional_embeddings = pe.positional_embedding(max_seq_len=1024, input_layer_shape=input_layer_shape)
-
         self.input_layer = ff.neuron_layer(
               input_shape=self.input_layer_shape, output_shape=self.d_model
             , activation=self.input_layer_activation
@@ -98,7 +97,7 @@ class transformer(object):
         self.output_layer = ff.neuron_layer(
               input_shape=output_layer_input_shape, output_shape=self.output_shape
             , activation=None # activation is none so this returns the logits, we apply the activation later for gradients
-            , clip_val=self.clip_val, adam=self.adam)
+            , clip_val=self.clip_val, is_output_layer=True, adam=self.adam)
         
         # TODO: revisit dictionary/embeddings
         # self.current_text = None
