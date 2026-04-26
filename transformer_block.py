@@ -50,9 +50,6 @@ class transformer_block(object):
         transformer_block_output = residual_with_self_attention + self.feed_forward_layer.forward_pass(
             self.layer_norm_2.forward_pass(residual_with_self_attention, train), train)
 
-        print("here")
-        print(transformer_block_output.shape)
-
         return transformer_block_output
 
 ####################################
