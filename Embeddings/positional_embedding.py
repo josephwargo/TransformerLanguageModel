@@ -26,14 +26,21 @@ class positional_embedding(object):
 ####################################
     def backward_pass(self, learning_rate, dL_dY):
         dL_dE = dL_dY
-        self.update(learning_rate, dL_dE)
+
+        # determining batch size so we can scale the gradients - but need to make sure there are actual batches first!
+        if len(dL_dY.shape) < 3:
+            batch_size = 1
+        else:
+            batch_size = dL_dY.shape[0]
+
+        self.update(learning_rate, dL_dE, batch_size)
 
     
-    def update(self, learning_rate, dL_dE):
+    def update(self, learning_rate, dL_dE, batch_size):
         pad_to_add = self.max_seq_len - dL_dE.shape[1]
         dL_dE_padded = np.sum(
               np.pad(dL_dE, ((0,0), (0,pad_to_add), (0,0)), mode='constant', constant_values=0)
             , axis=0
         )
         
-        self.embeddings += -learning_rate * dL_dE_padded
+        self.embeddings += -learning_rate * (dL_dE_padded / batch_size)

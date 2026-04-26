@@ -115,11 +115,17 @@ class attention_head(object):
         # taking the sume of all 3 to get the true dL_dY - this is mathmematically consistent with the chain rule
         dL_dAttn_head = dL_dAttn_head_q + dL_dAttn_head_k + dL_dAttn_head_v
         
-        self.update(learning_rate, dL_dW_q, dL_dW_k, dL_dW_v)
+        # determining batch size so we can scale the gradients - but need to make sure there are actual batches first!
+        if len(dL_dY.shape) < 3:
+            batch_size = 1
+        else:
+            batch_size = dL_dY.shape[0]
+
+        self.update(learning_rate, dL_dW_q, dL_dW_k, dL_dW_v, batch_size)
 
         return dL_dAttn_head
 
-    def update(self, learning_rate, dL_dW_q, dL_dW_k, dL_dW_v):
-        self.W_q += -learning_rate * dL_dW_q
-        self.W_k += -learning_rate * dL_dW_k
-        self.W_v += -learning_rate * dL_dW_v
+    def update(self, learning_rate, dL_dW_q, dL_dW_k, dL_dW_v, batch_size):
+        self.W_q += -learning_rate * (dL_dW_q / batch_size)
+        self.W_k += -learning_rate * (dL_dW_k / batch_size)
+        self.W_v += -learning_rate * (dL_dW_v / batch_size)

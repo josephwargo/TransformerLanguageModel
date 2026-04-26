@@ -72,9 +72,15 @@ class attention_block(object):
         # backward pass of the attention head
         dL_dAttn_Block = self.head.backward_pass(learning_rate, dL_dAttn_score)
 
-        self.update(learning_rate, dL_dW_o)
+        # determining batch size so we can scale the gradients - but need to make sure there are actual batches first!
+        if len(dL_dY.shape) < 3:
+            batch_size = 1
+        else:
+            batch_size = dL_dY.shape[0]
+
+        self.update(learning_rate, dL_dW_o, batch_size)
 
         return dL_dAttn_Block
 
-    def update(self, learning_rate, dL_dW_o):
-        self.W_o += -learning_rate * dL_dW_o
+    def update(self, learning_rate, dL_dW_o, batch_size):
+        self.W_o += -learning_rate * (dL_dW_o / batch_size)
