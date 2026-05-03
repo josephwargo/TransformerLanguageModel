@@ -55,13 +55,19 @@ class neuron_layer(object):
         # if it is an output layer - no activation
         if self.is_output_layer:
             hidden_state = x @ self.layer_weights.T + self.bias
+            # storing hidden state BEFORE any activation is done (could come later for output layers as these go into softmax for prediction)
+            if train:
+                self.hidden_state = hidden_state
+                self.prev_layer_hidden_state = x
         # an other layer - yes activation
         else:
-            hidden_state = caa.activation(self.activation, x @ self.layer_weights.T + self.bias)
-        
-        if train:
-            self.hidden_state = hidden_state
-            self.prev_layer_hidden_state = x
+            hidden_state = x @ self.layer_weights.T + self.bias
+            # storing hidden state BEFORE any activation is done
+            if train:
+                self.hidden_state = hidden_state
+                self.prev_layer_hidden_state = x
+            hidden_state = caa.activation(self.activation, hidden_state)
+            
         return hidden_state
 
 ####################################
@@ -79,7 +85,6 @@ class neuron_layer(object):
             logits_flat_masked = logits_flat[mask]
             
             # grad for non-padded
-            print(logits_flat_masked.shape)
             dL_dZ_active = caa.softmax_cross_entropy_grad(logits_flat_masked, Y_flat_masked)
             # reshaping to pre-flattened shape for dL_dZ
             dL_dZ_flat = np.zeros_like(logits_flat)
