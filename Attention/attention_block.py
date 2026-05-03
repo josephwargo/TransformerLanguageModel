@@ -47,7 +47,7 @@ class attention_block(object):
 
         if train:
             self.hidden_state = attention_scores_concat
-            self.prev_layer_hidden_state = x
+            self.prev_layer_hidden_state = masked_self_attention_concat
 
         return attention_scores_concat
 
@@ -73,14 +73,15 @@ class attention_block(object):
         dL_dAttn_Block = self.head.backward_pass(learning_rate, dL_dAttn_score)
 
         # determining batch size so we can scale the gradients - but need to make sure there are actual batches first!
-        if len(dL_dY.shape) < 3:
-            batch_size = 1
-        else:
-            batch_size = dL_dY.shape[0]
+        # if len(dL_dY.shape) < 3:
+        #     batch_size = 1
+        # else:
+        #     batch_size = dL_dY.shape[0]
 
-        self.update(learning_rate, dL_dW_o, batch_size)
+        self.update(learning_rate, dL_dW_o)#, batch_size)
 
         return dL_dAttn_Block
 
-    def update(self, learning_rate, dL_dW_o, batch_size):
-        self.W_o += -learning_rate * (dL_dW_o / batch_size)
+    def update(self, learning_rate, dL_dW_o):#, batch_size):
+        # self.W_o += -learning_rate * (dL_dW_o / batch_size)
+        self.W_o += -learning_rate * dL_dW_o

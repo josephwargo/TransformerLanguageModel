@@ -59,14 +59,16 @@ class layer_norm(object):
         dL_dX = (dL_dx_hat_d_model - dL_dx_hat_sum - dL_dx_hat_x_sum_x) / (self.x_std_dev * dL_dY.shape[-1])
         
         # determining batch size so we can scale the gradients - but need to make sure there are actual batches first!
-        if len(dL_dY.shape) < 3:
-            batch_size = 1
-        else:
-            batch_size = dL_dY.shape[0]
-        self.update(learning_rate, dL_dgamma, dL_dbeta, batch_size)
+        # if len(dL_dY.shape) < 3:
+        #     batch_size = 1
+        # else:
+        #     batch_size = dL_dY.shape[0]
+        self.update(learning_rate, dL_dgamma, dL_dbeta)#, batch_size)
 
         return dL_dX
 
-    def update(self, learning_rate, dL_dgamma, dL_dbeta, batch_size):
-        self.gamma += -learning_rate * (dL_dgamma / batch_size)
-        self.beta += -learning_rate * (dL_dbeta / batch_size)
+    def update(self, learning_rate, dL_dgamma, dL_dbeta):#, batch_size):
+        # self.gamma += -learning_rate * (dL_dgamma / batch_size)
+        # self.beta += -learning_rate * (dL_dbeta / batch_size)
+        self.gamma += -learning_rate * dL_dgamma
+        self.beta += -learning_rate * dL_dbeta

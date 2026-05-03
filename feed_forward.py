@@ -103,36 +103,38 @@ class neuron_layer(object):
         # dL_dW - requries flattening the previous layer hidden state and using the flattened dL_dZ
         prev_layer_hidden_state_flat = self.prev_layer_hidden_state.reshape(-1, self.prev_layer_hidden_state.shape[-1])
         dL_dW = dL_dZ_flat.T @ prev_layer_hidden_state_flat
-        
+
         # dL_db
         dL_db = np.sum(dL_dZ, axis=(0,1))
 
         # determining batch size so we can scale the gradients - but need to make sure there are actual batches first!
-        if len(dL_dx.shape) < 3:
-            batch_size = 1
-        else:
-            batch_size = dL_dx.shape[0]
+        # if len(dL_dx.shape) < 3:
+        #     batch_size = 1
+        # else:
+        #     batch_size = dL_dx.shape[0]
         
-        self.update(learning_rate, dL_dW, dL_db, batch_size)
+        self.update(learning_rate, dL_dW, dL_db)#, batch_size)
 
         return dL_dx
 
-    def update(self, learning_rate, dL_dW, dL_db, batch_size):
+    def update(self, learning_rate, dL_dW, dL_db):#, batch_size):
         # clipping
         # np.clip(self.layer_weight_updates, -self.clip_val, self.clip_val, out=self.layer_weight_updates)
         # np.clip(self.bias_updates, -self.clip_val, self.clip_val, out=self.bias_updates)
 
         # adam
-        if self.adam:
-            self.update_adam()
+        # if self.adam:
+        #     self.update_adam()
         
-        else:
-            self.layer_weights += -learning_rate * (dL_dW / batch_size)
-            self.bias += -learning_rate * (dL_db / batch_size)
+        # else:
+            # self.layer_weights += -learning_rate * (dL_dW / batch_size)
+            # self.bias += -learning_rate * (dL_db / batch_size)
+        self.layer_weights += -learning_rate * dL_dW
+        self.bias += -learning_rate * dL_db
 
     # TODO: update update_adam - this is leftover from RNN
     def update_adam(self):
-        
+        print("adam")
         # doing ^t on beta1 and beta2 once per step
         b1T = self.beta1**self.t
         b2T = self.beta2**self.t
