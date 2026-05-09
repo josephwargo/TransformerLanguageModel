@@ -94,7 +94,8 @@ class neuron_layer(object):
         # any other layer
         else:
             # calculating and flatting dL_dZ
-            dL_dZ = caa.loss_grad(self.activation, self.hidden_state, dL_dY)
+            dY_dZ = caa.activation_grad(self.activation, self.hidden_state)
+            dL_dZ = dL_dY * dY_dZ
             dL_dZ_flat = dL_dZ.reshape(-1, dL_dZ.shape[-1])
             
         # dL_dx
@@ -102,18 +103,13 @@ class neuron_layer(object):
 
         # dL_dW - requries flattening the previous layer hidden state and using the flattened dL_dZ
         prev_layer_hidden_state_flat = self.prev_layer_hidden_state.reshape(-1, self.prev_layer_hidden_state.shape[-1])
+        
         dL_dW = dL_dZ_flat.T @ prev_layer_hidden_state_flat
 
         # dL_db
         dL_db = np.sum(dL_dZ, axis=(0,1))
-
-        # determining batch size so we can scale the gradients - but need to make sure there are actual batches first!
-        # if len(dL_dx.shape) < 3:
-        #     batch_size = 1
-        # else:
-        #     batch_size = dL_dx.shape[0]
         
-        self.update(learning_rate, dL_dW, dL_db)#, batch_size)
+        self.update(learning_rate, dL_dW, dL_db)
 
         return dL_dx
 
@@ -126,37 +122,35 @@ class neuron_layer(object):
         # if self.adam:
         #     self.update_adam()
         
-        # else:
-            # self.layer_weights += -learning_rate * (dL_dW / batch_size)
-            # self.bias += -learning_rate * (dL_db / batch_size)
         self.layer_weights += -learning_rate * dL_dW
         self.bias += -learning_rate * dL_db
 
     # TODO: update update_adam - this is leftover from RNN
-    def update_adam(self):
-        print("adam")
-        # doing ^t on beta1 and beta2 once per step
-        b1T = self.beta1**self.t
-        b2T = self.beta2**self.t
+
+    # def update_adam(self):
+    #     print("adam")
+    #     # doing ^t on beta1 and beta2 once per step
+    #     b1T = self.beta1**self.t
+    #     b2T = self.beta2**self.t
         
-        # layer weights
-        # momentum stored
-        self.md_layer_weights *= self.beta1
-        self.md_layer_weights += (1-self.beta1)*self.layer_weight_updates
-        # RMSProp stored
-        self.vd_layer_weights *= self.beta2
-        self.vd_layer_weights += (1-self.beta2)*(self.layer_weight_updates**2)
-        # updates (incl. corrections and Adam)
-        self.layer_weights += -self.learning_rate * (self.md_layer_weights / (1-b1T) / (np.sqrt(self.vd_layer_weights / (1-b2T))+self.epsilon))
+    #     # layer weights
+    #     # momentum stored
+    #     self.md_layer_weights *= self.beta1
+    #     self.md_layer_weights += (1-self.beta1)*self.layer_weight_updates
+    #     # RMSProp stored
+    #     self.vd_layer_weights *= self.beta2
+    #     self.vd_layer_weights += (1-self.beta2)*(self.layer_weight_updates**2)
+    #     # updates (incl. corrections and Adam)
+    #     self.layer_weights += -self.learning_rate * (self.md_layer_weights / (1-b1T) / (np.sqrt(self.vd_layer_weights / (1-b2T))+self.epsilon))
 
-        # bias
-        # momentum stored
-        self.md_bias *= self.beta1
-        self.md_bias += (1-self.beta1)*self.bias_updates
-        # RMSProp stored
-        self.vd_bias *= self.beta2
-        self.vd_bias += (1-self.beta2)*(self.bias_updates**2)
-        # update (incl. corrections and Adam)
-        self.bias += -self.learning_rate * (self.md_bias / (1-b1T) / (np.sqrt(self.vd_bias / (1-b2T))+self.epsilon))
+    #     # bias
+    #     # momentum stored
+    #     self.md_bias *= self.beta1
+    #     self.md_bias += (1-self.beta1)*self.bias_updates
+    #     # RMSProp stored
+    #     self.vd_bias *= self.beta2
+    #     self.vd_bias += (1-self.beta2)*(self.bias_updates**2)
+    #     # update (incl. corrections and Adam)
+    #     self.bias += -self.learning_rate * (self.md_bias / (1-b1T) / (np.sqrt(self.vd_bias / (1-b2T))+self.epsilon))
 
-        self.t+=1 # increment
+    #     self.t+=1 # increment

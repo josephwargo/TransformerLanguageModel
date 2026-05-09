@@ -28,7 +28,7 @@ def sigmoidGradient(y):
 
 def relu(x):
     return np.maximum(0, x)
-def reluGradient(y):
+def relu_grad(y):
     return (y>0)*1
 
 def tanH(x):
@@ -74,16 +74,16 @@ def activation(activation_name, z):
         raise Exception('Unknown activation function')
 
 # choosing gradient
-def loss_grad(activation_name, hidden_state, dL_dY):
+def activation_grad(activation_name, hidden_state):
     if activation_name == 'relu':
-        dY_dZ = reluGradient(hidden_state)
-        dL_dZ = dL_dY * dY_dZ
+        dY_dZ = relu_grad(hidden_state)
+        # dL_dZ = dL_dY * dY_dZ
     elif activation_name == 'sigmoid':
         dY_dZ = sigmoidGradient(hidden_state)
-        dL_dZ = dL_dY * dY_dZ
+        # dL_dZ = dL_dY * dY_dZ
     elif activation_name == 'tanH':
         dY_dZ = tanHGradient(hidden_state)
-        dL_dZ = dL_dY * dY_dZ
+        # dL_dZ = dL_dY * dY_dZ
     # special case of softmax & cross entropy loss
     # TBD
-    return dL_dZ
+    return dY_dZ

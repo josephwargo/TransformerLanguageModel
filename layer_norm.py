@@ -33,9 +33,12 @@ class layer_norm(object):
     
     def forward_pass(self, x, train=False):
         
-        self.x_hat_val = self.x_hat(x, train)
+        x_hat_val = self.x_hat(x, train)
         
-        layer_normed = self.gamma * self.x_hat_val + self.beta
+        if train:
+            self.x_hat_val = x_hat_val
+
+        layer_normed = self.gamma * x_hat_val + self.beta
         
         return layer_normed
 
@@ -44,7 +47,6 @@ class layer_norm(object):
 ####################################    
     def backward_pass(self, learning_rate, dL_dY):
         # gradients to update gamma and beta
-        # dL_dgamma = (dL_dY.transpose(0,2,1) @ self.x_hat_val).sum(axis=(0,1))
         dL_dgamma = (dL_dY * self.x_hat_val).sum(axis=(0,1))
         dL_dbeta = dL_dY.sum(axis=(0,1))
 
@@ -52,23 +54,17 @@ class layer_norm(object):
         dL_dx_hat = dL_dY * self.gamma
  
         # passing gradient back through normalization
-        dL_dx_hat_d_model = dL_dx_hat * dL_dY.shape[-1]
-        dL_dx_hat_sum = dL_dx_hat.sum(axis=-1, keepdims=True)
-        dL_dx_hat_x_sum_x = (dL_dx_hat*self.x_hat_val).sum( axis=-1, keepdims=True) * self.x_hat_val
-
-        dL_dX = (dL_dx_hat_d_model - dL_dx_hat_sum - dL_dx_hat_x_sum_x) / (self.x_std_dev * dL_dY.shape[-1])
+        dL_dx_hat_direct = dL_dx_hat * dL_dY.shape[-1]
+        dL_dx_hat_mean_penalty = dL_dx_hat.sum(axis=-1, keepdims=True)
         
-        # determining batch size so we can scale the gradients - but need to make sure there are actual batches first!
-        # if len(dL_dY.shape) < 3:
-        #     batch_size = 1
-        # else:
-        #     batch_size = dL_dY.shape[0]
-        self.update(learning_rate, dL_dgamma, dL_dbeta)#, batch_size)
+        dL_dx_hat_variance_penalty = (dL_dx_hat*self.x_hat_val).sum(axis=-1, keepdims=True) * self.x_hat_val
+        
+        dL_dx = (dL_dx_hat_direct - dL_dx_hat_mean_penalty - dL_dx_hat_variance_penalty) / (self.x_std_dev * dL_dY.shape[-1])
 
-        return dL_dX
+        self.update(learning_rate, dL_dgamma, dL_dbeta)
 
-    def update(self, learning_rate, dL_dgamma, dL_dbeta):#, batch_size):
-        # self.gamma += -learning_rate * (dL_dgamma / batch_size)
-        # self.beta += -learning_rate * (dL_dbeta / batch_size)
+        return dL_dx
+
+    def update(self, learning_rate, dL_dgamma, dL_dbeta):
         self.gamma += -learning_rate * dL_dgamma
         self.beta += -learning_rate * dL_dbeta

@@ -165,6 +165,7 @@ class transformer(object):
         # reversing order of transformer dict for backwards pass
         rev_transformer_layers = list(self.transformer_layers.keys())
         rev_transformer_layers.reverse()
+        
         for layer_name in rev_transformer_layers:
             transformer_block = self.transformer_layers[layer_name]
             dL_dY = transformer_block.backward_pass(self.learning_rate, dL_dY)
