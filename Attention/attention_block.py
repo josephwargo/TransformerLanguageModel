@@ -57,31 +57,27 @@ class attention_block(object):
     def backward_pass(self, learning_rate, dL_dY):
         # dL_dZ = dL_dY because there is no activation
         dL_dZ_flat = dL_dY.reshape(-1, dL_dY.shape[-1])
-
         # dL_dW for W_o
         prev_layer_hidden_state_flat = self.prev_layer_hidden_state.reshape(-1, self.prev_layer_hidden_state.shape[-1])
         dL_dW_o = dL_dZ_flat.T @ prev_layer_hidden_state_flat
 
-        # dL_dY - dL_dZ = dL_dY because there is no activation
+        # dL_dZ = dL_dY because there is no activation
         dL_dAttn_score = dL_dY @ self.W_o.T
 
-        # reshaping dL_dY to be 4d (batch, seq_len, num_heads, head_shape) so we can do matrix multiplication with k, q, and v in the backwards pass of the attention heads
-        dL_dAttn_score_shape = (dL_dAttn_score.shape[0], self.num_heads, dL_dAttn_score.shape[1], self.head_output_dimension)
-        dL_dAttn_score = dL_dAttn_score.reshape(dL_dAttn_score_shape)
+        # reshaping dL_dY to be 4d (batch, seq_len, num_heads, head_shape)
+        # so we can do matrix multiplication with k, q, and v in the backwards pass of the attention heads
+        # reshape first
+        dL_dAttn_score_shape = (dL_dAttn_score.shape[0], dL_dAttn_score.shape[1], self.num_heads, self.head_output_dimension)
+        dL_dAttn_score_4d = dL_dAttn_score.reshape(dL_dAttn_score_shape)
+        # then transposing
+        dL_dAttn_score_4d = dL_dAttn_score_4d.transpose(0,2,1,3)
         
         # backward pass of the attention head
-        dL_dAttn_Block = self.head.backward_pass(learning_rate, dL_dAttn_score)
+        dL_dAttn_Block = self.head.backward_pass(learning_rate, dL_dAttn_score_4d)
 
-        # determining batch size so we can scale the gradients - but need to make sure there are actual batches first!
-        # if len(dL_dY.shape) < 3:
-        #     batch_size = 1
-        # else:
-        #     batch_size = dL_dY.shape[0]
-
-        self.update(learning_rate, dL_dW_o)#, batch_size)
+        self.update(learning_rate, dL_dW_o)
 
         return dL_dAttn_Block
 
-    def update(self, learning_rate, dL_dW_o):#, batch_size):
-        # self.W_o += -learning_rate * (dL_dW_o / batch_size)
+    def update(self, learning_rate, dL_dW_o):
         self.W_o += -learning_rate * dL_dW_o
