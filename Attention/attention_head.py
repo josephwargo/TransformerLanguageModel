@@ -38,9 +38,10 @@ class attention_head(object):
 # Forward Pass #
 ####################################
     def calculate_q_k_v(self, x, train=False):
-        # reshaping the output to be (batch, seq_len, num_heads, head_shape) as this is needed to calculate the attention score for different heads
+        # reshaping the output to be (batch, seq_len, num_heads, head_shape)
+        # then transposing of shape (batch_size, num_heads, seq_len, head_shape)
+        # as this is needed to calculate the attention score for different heads and must be done in two steps
         # will later reshape to (batch, seq_len, d_model) when we "concatenate" the separate heads in the attention block
-        # doing the reshaping in two steps to avoid memory bug
         q_proj = (x @ self.W_q.T).reshape(x.shape[0], x.shape[1], self.num_heads, self.head_dimension)
         self.q = q_proj.transpose(0,2,1,3)
         k_proj = (x @ self.W_k.T).reshape(x.shape[0], x.shape[1], self.num_heads, self.head_dimension)
@@ -59,9 +60,9 @@ class attention_head(object):
         # calculating attention score & scaling
         score_matrix = self.q @ self.k.transpose(0,1,3,2)
         scaled_score_matrix = score_matrix / self.dim_sqrt
-        
+
         # determining & applying the mask
-        score_mask = np.tril(np.ones(shape=scaled_score_matrix.shape))
+        score_mask = np.tril(np.ones(shape=(x.shape[1], x.shape[1])))
         masked_score = np.where(score_mask, scaled_score_matrix, -1e9)
 
         #applying softmax
@@ -77,20 +78,23 @@ class attention_head(object):
 # Backward Pass #
 ####################################    
     def backward_pass(self, learning_rate, dL_dY):
-        dL_dv = self.softmax_masked_score @ dL_dY
-    
+
+        dL_dv = self.softmax_masked_score.transpose(0,1,3,2) @ dL_dY
+
+        print(self.v.shape)
+        print(dL_dY.transpose(0,1,3,2).shape)
         # gradient w.r.t. softmax_masked_scores
-        dL_dMasked_scores = self.v @ dL_dY.transpose(0,1,3,2)
+        dL_dSoftmax_masked_scores = self.v @ dL_dY.transpose(0,1,3,2)
 
         # softmax gradient
-        dL_dZ = caa.softmax_grad(self.softmax_masked_score, dL_dMasked_scores)
+        dL_dMasked_scores = caa.softmax_grad(self.softmax_masked_score, dL_dSoftmax_masked_scores)
         
         # gradients for q and k
         # "unscaling"
-        dL_dZ_unscaled = dL_dZ / self.dim_sqrt
+        dL_dMasked_scores_unscaled = dL_dMasked_scores / self.dim_sqrt
         # dot products
-        dL_dq = dL_dZ_unscaled @ self.k
-        dL_dk = dL_dZ_unscaled @ self.q
+        dL_dq = dL_dMasked_scores_unscaled @ self.k
+        dL_dk = dL_dMasked_scores_unscaled @ self.q
 
         # gradients for W_q, W_k, and W_v
         prev_layer_hidden_state_flat = self.prev_layer_hidden_state.reshape(-1, self.d_model)
