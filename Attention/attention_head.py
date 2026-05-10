@@ -81,8 +81,6 @@ class attention_head(object):
 
         dL_dv = self.softmax_masked_score.transpose(0,1,3,2) @ dL_dY
 
-        print(self.v.shape)
-        print(dL_dY.transpose(0,1,3,2).shape)
         # gradient w.r.t. softmax_masked_scores
         dL_dSoftmax_masked_scores = self.v @ dL_dY.transpose(0,1,3,2)
 

@@ -39,18 +39,13 @@ def tanHGradient(y):
     return 1 - y**2
 
 def softmax(logits):
-    if len(logits.shape)>1:
-        normalization = np.max(logits, axis=1, keepdims=True)
-        numerator = np.exp(logits - normalization)
-        denominator = np.sum(numerator, axis=1, keepdims=True)
-    else:
-        normalization = np.max(logits)
-        numerator = np.exp(logits - normalization)
-        denominator = np.sum(numerator)
-    return numerator / (denominator+1e-8)
+    normalization = np.max(logits, axis=-1, keepdims=True)
+    numerator = np.exp(logits - normalization)
+    denominator = np.sum(numerator, axis=-1, keepdims=True)
+    return numerator / denominator
 def softmax_grad(softmax_score, dL_dY):
     dot_product_sum = np.sum(dL_dY * softmax_score, axis=-1, keepdims=True)
-    dL_dZ = softmax_score @ (dL_dY - dot_product_sum)
+    dL_dZ = softmax_score * (dL_dY - dot_product_sum)
     return dL_dZ
 
 # special gradient for softmax & cross entropy loss
