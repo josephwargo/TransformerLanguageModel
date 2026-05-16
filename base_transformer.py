@@ -188,7 +188,8 @@ class transformer(object):
             logits = batch_output[0]
             loss = batch_output[1]
             
+            print(f"Batch: {batch_num}")
             print(f"Loss: {loss}")
-
+            print("")
             # backward pass
             dL_dY = self.backward_pass(logits=logits, Y=Y_batch)

@@ -82,7 +82,7 @@ class attention_head(object):
         dL_dv = self.softmax_masked_score.transpose(0,1,3,2) @ dL_dY
 
         # gradient w.r.t. softmax_masked_scores
-        dL_dSoftmax_masked_scores = self.v @ dL_dY.transpose(0,1,3,2)
+        dL_dSoftmax_masked_scores = dL_dY @ self.v.transpose(0,1,3,2)
 
         # softmax gradient
         dL_dMasked_scores = caa.softmax_grad(self.softmax_masked_score, dL_dSoftmax_masked_scores)
@@ -92,27 +92,28 @@ class attention_head(object):
         dL_dMasked_scores_unscaled = dL_dMasked_scores / self.dim_sqrt
         # dot products
         dL_dq = dL_dMasked_scores_unscaled @ self.k
-        dL_dk = dL_dMasked_scores_unscaled @ self.q
+        dL_dk = dL_dMasked_scores_unscaled.transpose(0,1,3,2) @ self.q
 
         # gradients for W_q, W_k, and W_v
         prev_layer_hidden_state_flat = self.prev_layer_hidden_state.reshape(-1, self.d_model)
-        dL_dq_flat = dL_dq.transpose(0,2,1,3).reshape(-1, self.d_model)
-        dL_dk_flat = dL_dk.transpose(0,2,1,3).reshape(-1, self.d_model)
-        dL_dv_flat = dL_dv.transpose(0,2,1,3).reshape(-1, self.d_model)
+        
+        dL_dq_flat_1 = dL_dq.transpose(0,2,1,3).reshape(-1, self.d_model)
+        dL_dk_flat_1 = dL_dk.transpose(0,2,1,3).reshape(-1, self.d_model)
+        dL_dv_flat_1 = dL_dv.transpose(0,2,1,3).reshape(-1, self.d_model)
 
-        dL_dW_q = dL_dq_flat.T @ prev_layer_hidden_state_flat
-        dL_dW_k = dL_dk_flat.T @ prev_layer_hidden_state_flat
-        dL_dW_v = dL_dv_flat.T @ prev_layer_hidden_state_flat
+        dL_dW_q = dL_dq_flat_1.T @ prev_layer_hidden_state_flat
+        dL_dW_k = dL_dk_flat_1.T @ prev_layer_hidden_state_flat
+        dL_dW_v = dL_dv_flat_1.T @ prev_layer_hidden_state_flat
 
         # dL_dY output of the head - sum of dL_dY_q, dL_dY_k, and dL_dY_v
-        dL_dq_flat = dL_dq.transpose(0,2,1,3).reshape(dL_dq.shape[0], dL_dq.shape[2],  self.d_model)
-        dL_dAttn_head_q = dL_dq_flat @ self.W_q
+        # flattening to be 3d to pass back dL_dY
+        dL_dq_flat_2 = dL_dq.transpose(0,2,1,3).reshape(dL_dq.shape[0], dL_dq.shape[2],  self.d_model)
+        dL_dk_flat_2 = dL_dk.transpose(0,2,1,3).reshape(dL_dk.shape[0], dL_dk.shape[2],  self.d_model)
+        dL_dv_flat_2 = dL_dv.transpose(0,2,1,3).reshape(dL_dv.shape[0], dL_dv.shape[2],  self.d_model)
 
-        dL_dk_flat = dL_dk.transpose(0,2,1,3).reshape(dL_dk.shape[0], dL_dk.shape[2],  self.d_model)
-        dL_dAttn_head_k = dL_dk_flat @ self.W_k
-
-        dL_dv_flat = dL_dv.transpose(0,2,1,3).reshape(dL_dv.shape[0], dL_dv.shape[2],  self.d_model)
-        dL_dAttn_head_v = dL_dv_flat @ self.W_v
+        dL_dAttn_head_q = dL_dq_flat_2 @ self.W_q
+        dL_dAttn_head_k = dL_dk_flat_2 @ self.W_k
+        dL_dAttn_head_v = dL_dv_flat_2 @ self.W_v
 
         # taking the sume of all 3 to get the true dL_dY - this is mathmematically consistent with the chain rule
         dL_dAttn_head = dL_dAttn_head_q + dL_dAttn_head_k + dL_dAttn_head_v
