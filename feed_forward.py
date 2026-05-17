@@ -26,7 +26,7 @@ class neuron_layer(object):
 
         # hidden state
         self.hidden_state = None
-        self.prev_layer_hidden_state = None
+        self.prev_layer_output = None
 
         # type of layer
         self.is_output_layer = is_output_layer
@@ -58,14 +58,14 @@ class neuron_layer(object):
             # storing hidden state BEFORE any activation is done (could come later for output layers as these go into softmax for prediction)
             if train:
                 self.hidden_state = hidden_state
-                self.prev_layer_hidden_state = x
+                self.prev_layer_output = x
         # an other layer - yes activation
         else:
             hidden_state = x @ self.layer_weights.T + self.bias
             # storing hidden state BEFORE any activation is done
             if train:
                 self.hidden_state = hidden_state
-                self.prev_layer_hidden_state = x
+                self.prev_layer_output = x
             hidden_state = caa.activation(self.activation, hidden_state)
             
         return hidden_state
@@ -102,9 +102,9 @@ class neuron_layer(object):
         dL_dx = dL_dZ @ self.layer_weights
 
         # dL_dW - requries flattening the previous layer hidden state and using the flattened dL_dZ
-        prev_layer_hidden_state_flat = self.prev_layer_hidden_state.reshape(-1, self.prev_layer_hidden_state.shape[-1])
+        prev_layer_output_flat = self.prev_layer_output.reshape(-1, self.prev_layer_output.shape[-1])
         
-        dL_dW = dL_dZ_flat.T @ prev_layer_hidden_state_flat
+        dL_dW = dL_dZ_flat.T @ prev_layer_output_flat
 
         # dL_db
         dL_db = np.sum(dL_dZ, axis=(0,1))
@@ -113,7 +113,7 @@ class neuron_layer(object):
 
         return dL_dx
 
-    def update(self, learning_rate, dL_dW, dL_db):#, batch_size):
+    def update(self, learning_rate, dL_dW, dL_db):
         # clipping
         # np.clip(self.layer_weight_updates, -self.clip_val, self.clip_val, out=self.layer_weight_updates)
         # np.clip(self.bias_updates, -self.clip_val, self.clip_val, out=self.bias_updates)

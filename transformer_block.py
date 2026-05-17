@@ -63,15 +63,15 @@ class transformer_block(object):
         dL_dLayer_norm_2 = self.layer_norm_2.backward_pass(learning_rate, dL_dFF)
 
         # adding back for the residual stream - will need to add this gradient back in at the end
-        dL_dResid_add_2 = dL_dLayer_norm_2 + dL_dY
+        dL_dResidual_with_self_attention = dL_dLayer_norm_2 + dL_dY
 
         # attention backward pass
-        dL_dAttn = self.self_attention.backward_pass(learning_rate, dL_dResid_add_2)
+        dL_dAttn = self.self_attention.backward_pass(learning_rate, dL_dResidual_with_self_attention)
 
         # Layer Norm backward pass
         dL_dLayer_norm_1 = self.layer_norm_1.backward_pass(learning_rate, dL_dAttn)
 
         # adding in previously stored gradient 
-        dL_dRes_add_1 = dL_dLayer_norm_1 + dL_dResid_add_2
+        dL_dRes_add_1 = dL_dLayer_norm_1 + dL_dResidual_with_self_attention
 
         return dL_dRes_add_1

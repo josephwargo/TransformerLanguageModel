@@ -67,13 +67,12 @@ class transformer(object):
 ####################################
 # Init Input Layer
 ####################################
-        # TODO: make max_seq_len a thing, and update this after making d_model a thing
-        self.positional_embeddings = pe.positional_embedding(max_seq_len=1024, input_layer_shape=input_layer_shape)
         self.input_layer = ff.neuron_layer(
               input_shape=self.input_layer_shape, output_shape=self.d_model
             , activation=self.input_layer_activation
             , clip_val=self.clip_val, adam=self.adam
         )
+        self.positional_embeddings = pe.positional_embedding(max_seq_len=1024, input_layer_shape=self.d_model)
 
 ####################################
 # Init Transformer Blocks
@@ -98,32 +97,16 @@ class transformer(object):
               input_shape=output_layer_input_shape, output_shape=self.output_shape
             , activation=None # activation is none so this returns the logits, we apply the activation later for gradients
             , clip_val=self.clip_val, is_output_layer=True, adam=self.adam)
-        
-        # TODO: revisit dictionary/embeddings
-        # self.current_text = None
-        # self.pad_index = self.word2ind['<PAD>']
-
-
-
-# TODO: revisit dictionary/embeddings
-    # def input_2_ind(self, text, train=True):
-    #     if train:
-    #         longest_sequence = max(len(sequence) for sequence in text)
-    #         pad_val = '<PAD>'
-    #         text = [sequence + [pad_val] * (longest_sequence - len(sequence)) for sequence in text]
-    #     text = self.word2ind_mapper(text)
-
-    #     return text
 
 ####################################
 # Forward Pass #
 ####################################
     def forward_pass(self, x, Y=None, train=False):
-        # TODO: how this changes for train vs test
         # input layer
-        batch_length = x.shape[-2]
-        x = self.positional_embeddings.forward_pass(x, batch_length, train)
+        # batch_length = x.shape[-1]
+        seq_len = x.shape[-2]
         x = self.input_layer.forward_pass(x, train)
+        x = self.positional_embeddings.forward_pass(x, seq_len, train)
         # transformer blocks
         for transformer_block in self.transformer_layers.values():
             x = transformer_block.forward_pass(x, train)
@@ -171,10 +154,8 @@ class transformer(object):
             dL_dY = transformer_block.backward_pass(self.learning_rate, dL_dY)
 
         # input layer
+        dL_dY = self.positional_embeddings.backward_pass(self.learning_rate, dL_dY)
         dL_dY = self.input_layer.backward_pass(self.learning_rate, dL_dY=dL_dY, pad_token_ind=pad_token_ind)
-
-        self.positional_embeddings.backward_pass(self.learning_rate, dL_dY)
-
 
 ####################################
 # Training #

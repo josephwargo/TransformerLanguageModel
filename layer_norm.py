@@ -10,7 +10,7 @@ class layer_norm(object):
         self.gamma = np.ones(shape=input_size)
         self.beta = np.zeros(shape=input_size)
 
-        self.prev_layer_hidden_state = None
+        self.prev_layer_output = None
         self.x_std_dev = None
         self.x_hat_val = None
 
@@ -19,7 +19,7 @@ class layer_norm(object):
 ####################################
     def x_hat(self, x, train=False):
         if train:
-            self.prev_layer_hidden_state = x
+            self.prev_layer_output = x
 
         x_mean = np.mean(x, axis=-1, keepdims=True)
         x_std_dev = np.sqrt(np.var(x, axis=-1, keepdims=True) + 1e-5)

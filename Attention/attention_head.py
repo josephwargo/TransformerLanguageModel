@@ -24,7 +24,7 @@ class attention_head(object):
         self.W_v = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32) # value weights
 
         # storing previous layer hidden state for backprop
-        self.prev_layer_hidden_state = None
+        self.prev_layer_output = None
 
         # initialization of q, k, and v vectors
         self.q = None
@@ -51,7 +51,7 @@ class attention_head(object):
 
         # if train, storing x
         if train:
-            self.prev_layer_hidden_state = x
+            self.prev_layer_output = x
 
     def forward_pass(self, x, train=False):
         # calculating q, k, and v
@@ -95,15 +95,15 @@ class attention_head(object):
         dL_dk = dL_dMasked_scores_unscaled.transpose(0,1,3,2) @ self.q
 
         # gradients for W_q, W_k, and W_v
-        prev_layer_hidden_state_flat = self.prev_layer_hidden_state.reshape(-1, self.d_model)
+        prev_layer_output_flat = self.prev_layer_output.reshape(-1, self.d_model)
         
         dL_dq_flat_1 = dL_dq.transpose(0,2,1,3).reshape(-1, self.d_model)
         dL_dk_flat_1 = dL_dk.transpose(0,2,1,3).reshape(-1, self.d_model)
         dL_dv_flat_1 = dL_dv.transpose(0,2,1,3).reshape(-1, self.d_model)
 
-        dL_dW_q = dL_dq_flat_1.T @ prev_layer_hidden_state_flat
-        dL_dW_k = dL_dk_flat_1.T @ prev_layer_hidden_state_flat
-        dL_dW_v = dL_dv_flat_1.T @ prev_layer_hidden_state_flat
+        dL_dW_q = dL_dq_flat_1.T @ prev_layer_output_flat
+        dL_dW_k = dL_dk_flat_1.T @ prev_layer_output_flat
+        dL_dW_v = dL_dv_flat_1.T @ prev_layer_output_flat
 
         # dL_dY output of the head - sum of dL_dY_q, dL_dY_k, and dL_dY_v
         # flattening to be 3d to pass back dL_dY

@@ -28,7 +28,7 @@ class attention_block(object):
 
         # hidden state
         self.hidden_state = None
-        self.prev_layer_hidden_state = None
+        self.prev_layer_output = None
         
 ####################################
 # Forward Pass #
@@ -47,7 +47,7 @@ class attention_block(object):
 
         if train:
             self.hidden_state = attention_scores_concat
-            self.prev_layer_hidden_state = masked_self_attention_concat
+            self.prev_layer_output = masked_self_attention_concat
 
         return attention_scores_concat
 
@@ -58,8 +58,8 @@ class attention_block(object):
         # dL_dZ = dL_dY because there is no activation
         dL_dZ_flat = dL_dY.reshape(-1, dL_dY.shape[-1])
         # dL_dW for W_o
-        prev_layer_hidden_state_flat = self.prev_layer_hidden_state.reshape(-1, self.prev_layer_hidden_state.shape[-1])
-        dL_dW_o = dL_dZ_flat.T @ prev_layer_hidden_state_flat
+        prev_layer_output_flat = self.prev_layer_output.reshape(-1, self.prev_layer_output.shape[-1])
+        dL_dW_o = dL_dZ_flat.T @ prev_layer_output_flat
 
         # dL_dZ = dL_dY because there is no activation
         dL_dAttn_score = dL_dY @ self.W_o.T
