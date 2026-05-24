@@ -1,0 +1,1 @@
+{"input_layer_shape": 300, "input_layer_activation": "relu", "d_model": 512, "hidden_layer_activations": ["relu", "relu", "relu"], "hidden_layer_num_heads": 8, "output_shape": 71083}

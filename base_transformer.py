@@ -4,6 +4,7 @@ import costs_and_activations as caa
 import Embeddings.positional_embedding as pe
 import layer_norm as ln
 import transformer_block as tb
+import json
 
 # entire net
 class transformer(object):
@@ -174,3 +175,110 @@ class transformer(object):
             print("")
             # backward pass
             dL_dY = self.backward_pass(logits=logits, Y=Y_batch)
+
+
+####################################
+# Misc Functions #
+####################################
+    def get_model_dict(self):
+        model_dict = {}
+
+        # input layer
+        model_dict['input_layer_weights'] = self.input_layer.layer_weights
+        model_dict['input_layer_biases'] = self.input_layer.bias
+
+        # pos embeddings
+        model_dict['positional_embeddings'] = self.positional_embeddings.embeddings
+
+        # transformer layers
+        for layer_name, block in self.transformer_layers.items():
+            # layer norm 1
+            model_dict[f'{layer_name}_layer_norm_1_gamma'] = block.layer_norm_1.gamma
+            model_dict[f'{layer_name}_layer_norm_1_beta'] = block.layer_norm_1.beta
+
+            # attention block
+            model_dict[f'{layer_name}_attention_block_W_q'] = block.self_attention.head.W_q
+            model_dict[f'{layer_name}_attention_block_W_k'] = block.self_attention.head.W_k
+            model_dict[f'{layer_name}_attention_block_W_v'] = block.self_attention.head.W_v
+            model_dict[f'{layer_name}_attention_block_W_o'] = block.self_attention.W_o
+
+            # layer norm 2
+            model_dict[f'{layer_name}_layer_norm_2_gamma'] = block.layer_norm_2.gamma
+            model_dict[f'{layer_name}_layer_norm_2_beta'] = block.layer_norm_2.beta
+
+            # feed forward
+            model_dict[f'{layer_name}_feed_forward_weights'] = block.feed_forward_layer.layer_weights
+            model_dict[f'{layer_name}_feed_forward_biases'] = block.feed_forward_layer.bias
+        
+        # output layer norm
+        model_dict['output_layer_norm_gamma'] = self.output_layer_norm.gamma
+        model_dict['output_layer_norm_beta'] = self.output_layer_norm.beta
+
+        # output layer
+        model_dict['output_layer_weights'] = self.output_layer.layer_weights
+        model_dict['output_layer_biases'] = self.output_layer.bias
+
+        config = {
+        "input_layer_shape": self.input_layer_shape,
+        'input_layer_activation': self.input_layer_activation,
+        "d_model": self.d_model,
+        "hidden_layer_activations": self.hidden_layer_activations,
+        "hidden_layer_num_heads": self.hidden_layer_num_heads,
+        "output_shape": self.output_shape
+        }
+
+        return model_dict, config
+
+    def save_model(self, file_path):
+        model_dict, config = self.get_model_dict()
+
+        with open(f'{file_path}/config.json', 'w') as f:
+            json.dump(config, f)
+
+        np.savez_compressed(f'{file_path}/model.npz', **model_dict)
+
+    def load_model(self, file_path):
+        with open(f'{file_path}/config.json', 'r') as f:
+            config = json.load(f)
+        
+        # initiating model with stored configs
+        # model = bt.transformer(**config)
+
+        # initiating weights and biases based on what we have stored
+        model_dict = np.load(f'{file_path}/model.npz')
+
+
+        # input layer
+        self.input_layer.layer_weights = model_dict['input_layer_weights']
+        self.input_layer.bias = model_dict['input_layer_biases']
+
+        # pos embeddings
+        self.positional_embeddings.embeddings = model_dict['positional_embeddings']
+
+        # transformer layers
+        for layer_name, block in self.transformer_layers.items():
+            # layer norm 1
+            block.layer_norm_1.gamma = model_dict[f'{layer_name}_layer_norm_1_gamma']
+            block.layer_norm_1.beta = model_dict[f'{layer_name}_layer_norm_1_beta']
+
+            # attention block
+            block.self_attention.head.W_q = model_dict[f'{layer_name}_attention_block_W_q']
+            block.self_attention.head.W_k = model_dict[f'{layer_name}_attention_block_W_k']
+            block.self_attention.head.W_v = model_dict[f'{layer_name}_attention_block_W_v']
+            block.self_attention.W_o = model_dict[f'{layer_name}_attention_block_W_o']
+
+            # layer norm 2
+            block.layer_norm_2.gamma = model_dict[f'{layer_name}_layer_norm_2_gamma']
+            block.layer_norm_2.beta = model_dict[f'{layer_name}_layer_norm_2_beta']
+
+            # feed forward
+            block.feed_forward_layer.layer_weights = model_dict[f'{layer_name}_feed_forward_weights']
+            block.feed_forward_layer.bias = model_dict[f'{layer_name}_feed_forward_biases']
+        
+        # output layer norm
+        self.output_layer_norm.gamma = model_dict['output_layer_norm_gamma']
+        self.output_layer_norm.beta = model_dict['output_layer_norm_beta']
+
+        # output layer
+        self.output_layer.layer_weights = model_dict['output_layer_weights']
+        self.output_layer.bias = model_dict['output_layer_biases']
