@@ -1,3 +1,3 @@
-I am coding my way through deep learning history using just numpy to improve my understanding of AI. This is a WIP implementation of a Transformer language model
+This is an implementation of a decoder-only Transformer language model written in NumPy only. I believe the code is correct, now I just need to train an actual model to start predicting text! Next, I want to try adding RLHF or another important foundational AI paper.
 
-I am using this doc to detail each step of the forward and backward pass to make sure I am truly understanding what I am building: https://docs.google.com/spreadsheets/d/1bDB1wPxcVrq55hjSDb3glXPYFl0f3-6sNImfGcF9huw/edit?usp=sharing
+I am coding my way through deep learning history using just numpy to improve my understanding of AI. I am using this doc to detail each step of the forward and backward pass to make sure I am truly understanding what I am building: https://docs.google.com/spreadsheets/d/1bDB1wPxcVrq55hjSDb3glXPYFl0f3-6sNImfGcF9huw/edit?usp=sharing
