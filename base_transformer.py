@@ -17,6 +17,7 @@ class transformer(object):
     def __init__(
           self
         # , embeddings, word2ind
+        , embeddings
         , input_layer_shape, input_layer_activation
         , d_model, hidden_layer_activations
         , hidden_layer_num_heads
@@ -26,7 +27,8 @@ class transformer(object):
         , learning_rate=.001, epochs=1, batch_size=8
         , adam=False, clip_val=1, debug=False
     ):
-        
+        self.embeddings = embeddings
+
         self.debug = debug
 
         # errors
