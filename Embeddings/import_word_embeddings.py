@@ -1,0 +1,64 @@
+import os
+import re
+import zipfile
+import numpy
+import cupy as np
+from datasets import load_dataset
+from huggingface_hub import hf_hub_download
+
+# constants
+# START_TOKEN = '<START>'
+# END_TOKEN = '<END>'
+# NUM_SAMPLES = 10000
+
+def download_word_embeddings(repo_id, filename_zipped, filename_unzipped):
+    print("Downloading GloVe embeddings from Hugging Face...")
+    glove_zip_path = hf_hub_download(
+        repo_id=repo_id, 
+        filename=filename_zipped
+    )
+
+    extraction_dir = os.path.dirname(glove_zip_path)
+    embeddings_filepath = os.path.join(extraction_dir, filename_unzipped)
+
+
+    if not os.path.exists(embeddings_filepath):
+        print("Extracting text file...")
+        with zipfile.ZipFile(glove_zip_path, 'r') as zip_ref:
+            zip_ref.extract(filename_unzipped, path=extraction_dir)
+    return embeddings_filepath
+
+
+
+def parse_corpus(dataset, start_token, end_token, num_samples):
+    files = dataset["train"]["text"][:num_samples]
+    return [[start_token] + [re.sub(r'[^\w]', '', w.lower()) for w in f.split(" ")] + [end_token] for f in files]
+
+def get_embeddings_for_corpus(filepath, words, dimensions):
+    vocab_size = len(words)
+    
+    # numpy first before converting to cupy
+    cpu_embeddings = numpy.zeros((vocab_size, dimensions), dtype=numpy.float32)
+
+    with open(filepath, encoding="utf8") as f:
+        for line in f:
+            word, *vector = line.split()
+            # Removed .keys() for faster O(1) dictionary lookup
+            if word in words: 
+                index = words[word]
+                cpu_embeddings[index] = numpy.array(vector, dtype=numpy.float32)[:dimensions]
+                
+    # 2. Transfer the complete matrix to the GPU once
+    gpu_embeddings = np.asarray(cpu_embeddings)
+    return gpu_embeddings
+
+def word_to_ind(corpus, pad_val):
+
+    corpus_words = [y for x in corpus for y in x]
+    corpus_words = list(set(corpus_words))
+    word2ind={}
+    for i in range(len(corpus_words)+1):
+        word2ind[corpus_words[i-1]] = i
+    word2ind[pad_val] = 0
+
+    return word2ind
