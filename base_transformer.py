@@ -107,9 +107,11 @@ class transformer(object):
 ####################################
 # Forward Pass #
 ####################################
-    def forward_pass(self, x, Y=None, train=False):
+    def forward_pass(self, x_ind, Y=None, train=False):
+        # x from ind to embeddings
+        x = self.embeddings[x_ind]
+        
         # input layer
-        # batch_length = x.shape[-1]
         seq_len = x.shape[-2]
         x = self.input_layer.forward_pass(x, train)
         x = self.positional_embeddings.forward_pass(x, seq_len, train)
@@ -132,6 +134,8 @@ class transformer(object):
             # output layer
             logits = self.output_layer.forward_pass(x[:, -1, :], train)
             loss = None
+
+        del x
 
         return logits, loss
     
