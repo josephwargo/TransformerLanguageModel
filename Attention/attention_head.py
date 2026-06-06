@@ -1,4 +1,4 @@
-import cupy as np
+import cupy as cp
 import costs_and_activations as caa
 
 class attention_head(object):
@@ -11,17 +11,17 @@ class attention_head(object):
         self.num_heads = num_heads
         self.d_model = d_model
         self.head_dimension = int(self.d_model / self.num_heads)
-        self.dim_sqrt = np.sqrt(self.head_dimension)
+        self.dim_sqrt = cp.sqrt(self.head_dimension)
 
         # initialization of weights - using only Xavier for now
         self.dim_for_xavier = self.d_model + self.head_dimension
-        xavier_val = np.sqrt(2/(self.dim_for_xavier))
+        xavier_val = cp.sqrt(2/(self.dim_for_xavier))
 
         # instead of having separate heads, initiating each weight matrix with the shape (d_model, d_model), as this is mathematically equivalent to having separate heads
         # does not matter whether in_dim or out_dim is first as both are d_model
-        self.W_q = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32) # query weights
-        self.W_k = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32) # key weights
-        self.W_v = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32) # value weights
+        self.W_q = cp.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(cp.float32) # query weights
+        self.W_k = cp.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(cp.float32) # key weights
+        self.W_v = cp.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(cp.float32) # value weights
 
         # storing previous layer hidden state for backprop
         self.prev_layer_output = None
@@ -62,8 +62,8 @@ class attention_head(object):
         scaled_score_matrix = score_matrix / self.dim_sqrt
 
         # determining & applying the mask
-        score_mask = np.tril(np.ones(shape=(x.shape[1], x.shape[1])))
-        masked_score = np.where(score_mask, scaled_score_matrix, -1e9)
+        score_mask = cp.tril(cp.ones(shape=(x.shape[1], x.shape[1])))
+        masked_score = cp.where(score_mask, scaled_score_matrix, -1e9)
 
         #applying softmax
         softmax_masked_score = caa.softmax(masked_score)

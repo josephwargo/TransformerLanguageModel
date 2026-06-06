@@ -1,4 +1,4 @@
-import cupy as np
+import cupy as cp
 
 
 class positional_embedding(object):
@@ -12,7 +12,7 @@ class positional_embedding(object):
         self.max_seq_len = max_seq_len
         self.input_layer_shape = input_layer_shape
 
-        self.embeddings = np.random.normal(0, .02, size=(self.max_seq_len, input_layer_shape))
+        self.embeddings = cp.random.normal(0, .02, size=(self.max_seq_len, input_layer_shape))
 
 ####################################
 # Forward Pass #
@@ -37,7 +37,7 @@ class positional_embedding(object):
         # summing across batch axis so we can update pos embeddings
         # which are shape max_seq_len = maximum possible tokens x input_layer_shape
         # = shape of input token embeddings
-        dL_dE_summed = np.sum(dL_dE, axis=0)
+        dL_dE_summed = cp.sum(dL_dE, axis=0)
  
         # updating embeddings inplace
         self.embeddings[:dL_dE_summed.shape[0]] += -learning_rate * dL_dE_summed

@@ -1,4 +1,4 @@
-import cupy as np
+import cupy as cp
 import Attention.attention_head as ah
 
 class attention_block(object):
@@ -23,8 +23,8 @@ class attention_block(object):
         
         # weights to aggregate heads
         # initialization of weights - using only Xavier for now
-        xavier_val = np.sqrt(2/(self.d_model+self.d_model))
-        self.W_o = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32) # does not matter whether in_dim or out_dim is first as both are d_model
+        xavier_val = cp.sqrt(2/(self.d_model+self.d_model))
+        self.W_o = cp.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(cp.float32) # does not matter whether in_dim or out_dim is first as both are d_model
 
         # hidden state
         self.hidden_state = None

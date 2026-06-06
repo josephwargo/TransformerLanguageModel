@@ -1,4 +1,4 @@
-import cupy as np
+import cupy as cp
 import costs_and_activations as caa
 
 
@@ -12,11 +12,11 @@ class neuron_layer(object):
         # layer info 
         self.input_shape = input_shape # length of vector that will be inputted into the weights
         self.output_shape = output_shape # desired length of weight output (and therefore layer output)
-        layer_xavier = np.sqrt(2/(self.input_shape+self.output_shape)) # value used to determine optimal
+        layer_xavier = cp.sqrt(2/(self.input_shape+self.output_shape)) # value used to determine optimal
         # shape is (out_dim, in_dim) for hardware optimization. this is NOT untuitive
-        self.layer_weights = np.random.normal(0,layer_xavier, size=(self.output_shape, self.input_shape)).astype(np.float32)
+        self.layer_weights = cp.random.normal(0,layer_xavier, size=(self.output_shape, self.input_shape)).astype(cp.float32)
 
-        self.bias = np.zeros(shape=(output_shape)).astype(np.float32) # initializing bias as 0s - no xavier here
+        self.bias = cp.zeros(shape=(output_shape)).astype(cp.float32) # initializing bias as 0s - no xavier here
 
         # activation
         self.activation = activation # activation function that will be applied to the output of the weights
@@ -41,11 +41,11 @@ class neuron_layer(object):
             self.epsilon = 1e-8
             self.t = 1
             # arrays to store 
-            self.md_layer_weights = np.zeros(shape=(self.input_shape,self.output_shape)).astype(np.float32)
-            self.vd_layer_weights = np.zeros(shape=(self.input_shape,self.output_shape)).astype(np.float32)
+            self.md_layer_weights = cp.zeros(shape=(self.input_shape,self.output_shape)).astype(cp.float32)
+            self.vd_layer_weights = cp.zeros(shape=(self.input_shape,self.output_shape)).astype(cp.float32)
 
-            self.md_bias = np.zeros(shape=(output_shape)).astype(np.float32)         
-            self.vd_bias = np.zeros(shape=(output_shape)).astype(np.float32)
+            self.md_bias = cp.zeros(shape=(output_shape)).astype(cp.float32)         
+            self.vd_bias = cp.zeros(shape=(output_shape)).astype(cp.float32)
 
 
 ####################################
@@ -87,7 +87,7 @@ class neuron_layer(object):
             # grad for non-padded
             dL_dZ_active = caa.softmax_cross_entropy_grad(logits_flat_masked, Y_flat_masked)
             # reshaping to pre-flattened shape for dL_dZ
-            dL_dZ_flat = np.zeros_like(logits_flat)
+            dL_dZ_flat = cp.zeros_like(logits_flat)
             dL_dZ_flat[mask] = dL_dZ_active
             dL_dZ = dL_dZ_flat.reshape(logits.shape)
         
@@ -107,7 +107,7 @@ class neuron_layer(object):
         dL_dW = dL_dZ_flat.T @ prev_layer_output_flat
 
         # dL_db
-        dL_db = np.sum(dL_dZ, axis=(0,1))
+        dL_db = cp.sum(dL_dZ, axis=(0,1))
         
         self.update(learning_rate, dL_dW, dL_db)
 
@@ -115,8 +115,8 @@ class neuron_layer(object):
 
     def update(self, learning_rate, dL_dW, dL_db):
         # clipping
-        # np.clip(self.layer_weight_updates, -self.clip_val, self.clip_val, out=self.layer_weight_updates)
-        # np.clip(self.bias_updates, -self.clip_val, self.clip_val, out=self.bias_updates)
+        # cp.clip(self.layer_weight_updates, -self.clip_val, self.clip_val, out=self.layer_weight_updates)
+        # cp.clip(self.bias_updates, -self.clip_val, self.clip_val, out=self.bias_updates)
 
         # adam
         # if self.adam:
@@ -141,7 +141,7 @@ class neuron_layer(object):
     #     self.vd_layer_weights *= self.beta2
     #     self.vd_layer_weights += (1-self.beta2)*(self.layer_weight_updates**2)
     #     # updates (incl. corrections and Adam)
-    #     self.layer_weights += -self.learning_rate * (self.md_layer_weights / (1-b1T) / (np.sqrt(self.vd_layer_weights / (1-b2T))+self.epsilon))
+    #     self.layer_weights += -self.learning_rate * (self.md_layer_weights / (1-b1T) / (cp.sqrt(self.vd_layer_weights / (1-b2T))+self.epsilon))
 
     #     # bias
     #     # momentum stored
@@ -151,6 +151,6 @@ class neuron_layer(object):
     #     self.vd_bias *= self.beta2
     #     self.vd_bias += (1-self.beta2)*(self.bias_updates**2)
     #     # update (incl. corrections and Adam)
-    #     self.bias += -self.learning_rate * (self.md_bias / (1-b1T) / (np.sqrt(self.vd_bias / (1-b2T))+self.epsilon))
+    #     self.bias += -self.learning_rate * (self.md_bias / (1-b1T) / (cp.sqrt(self.vd_bias / (1-b2T))+self.epsilon))
 
     #     self.t+=1 # increment

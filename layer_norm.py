@@ -1,4 +1,4 @@
-import cupy as np
+import cupy as cp
 
 class layer_norm(object):
 ####################################
@@ -7,8 +7,8 @@ class layer_norm(object):
     def __init__(self, input_size):
         # self.batch_size = batch_size
 
-        self.gamma = np.ones(shape=input_size)
-        self.beta = np.zeros(shape=input_size)
+        self.gamma = cp.ones(shape=input_size)
+        self.beta = cp.zeros(shape=input_size)
 
         self.prev_layer_output = None
         self.x_std_dev = None
@@ -21,8 +21,8 @@ class layer_norm(object):
         if train:
             self.prev_layer_output = x
 
-        x_mean = np.mean(x, axis=-1, keepdims=True)
-        x_std_dev = np.sqrt(np.var(x, axis=-1, keepdims=True) + 1e-5)
+        x_mean = cp.mean(x, axis=-1, keepdims=True)
+        x_std_dev = cp.sqrt(cp.var(x, axis=-1, keepdims=True) + 1e-5)
 
         if train:
             self.x_std_dev = x_std_dev

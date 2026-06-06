@@ -1,4 +1,7 @@
-import cupy as np
+import cupy as cp
+mempool = cp.get_default_memory_pool()
+pinned_mempool = cp.get_default_pinned_memory_pool()
+
 import feed_forward as ff
 import costs_and_activations as caa
 import Embeddings.positional_embedding as pe
@@ -35,7 +38,7 @@ class transformer(object):
         # self.embeddings = embeddings
         # self.corpus = corpus
         # self.word2ind = word2ind
-        # self.word2ind_mapper = np.vectorize(word2ind.get)
+        # self.word2ind_mapper = cp.vectorize(word2ind.get)
         # self.embeddings_shape = embeddings.shape[1]
         # self.num_embeddings = embeddings.shape[0]
 
@@ -52,9 +55,9 @@ class transformer(object):
         self.epochs = epochs
         self.batch_size = batch_size
         self.adam = adam
-        self.learning_rate = np.float32(learning_rate)
+        self.learning_rate = cp.float32(learning_rate)
         self.loss_function = loss_function
-        self.clip_val = np.float32(clip_val)
+        self.clip_val = cp.float32(clip_val)
         self.activations = hidden_layer_activations# + [output_layer_activation]
 
         # loss
@@ -134,7 +137,7 @@ class transformer(object):
         # TODO: add "temperature" so we can sample the softmax
         logits, loss = self.forward_pass(x)
         prob_dist = caa.activation('softmax', logits)
-        return np.argmax(prob_dist, axis=1), prob_dist
+        return cp.argmax(prob_dist, axis=1), prob_dist
 
 ####################################
 # Backward Pass #
@@ -175,6 +178,8 @@ class transformer(object):
             print("")
             # backward pass
             dL_dY = self.backward_pass(logits=logits, Y=Y_batch)
+            mempool.free_all_blocks()
+            pinned_mempool.free_all_blocks()
 
 
 ####################################
@@ -235,7 +240,7 @@ class transformer(object):
         with open(f'{file_path}/config.json', 'w') as f:
             json.dump(config, f)
 
-        np.savez_compressed(f'{file_path}/model.npz', **model_dict)
+        cp.savez_compressed(f'{file_path}/model.npz', **model_dict)
 
     def load_model(self, file_path):
         with open(f'{file_path}/config.json', 'r') as f:
@@ -245,7 +250,7 @@ class transformer(object):
         # model = bt.transformer(**config)
 
         # initiating weights and biases based on what we have stored
-        model_dict = np.load(f'{file_path}/model.npz')
+        model_dict = cp.load(f'{file_path}/model.npz')
 
 
         # input layer

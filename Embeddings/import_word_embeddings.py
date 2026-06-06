@@ -1,8 +1,8 @@
 import os
 import re
 import zipfile
-import numpy
-import cupy as np
+import numpy as np
+import cupy as cp
 from datasets import load_dataset
 from huggingface_hub import hf_hub_download
 
@@ -38,7 +38,7 @@ def get_embeddings_for_corpus(filepath, words, dimensions):
     vocab_size = len(words)
     
     # numpy first before converting to cupy
-    cpu_embeddings = numpy.zeros((vocab_size, dimensions), dtype=numpy.float32)
+    cpu_embeddings = np.zeros((vocab_size, dimensions), dtype=np.float32)
 
     with open(filepath, encoding="utf8") as f:
         for line in f:
@@ -46,10 +46,10 @@ def get_embeddings_for_corpus(filepath, words, dimensions):
             # Removed .keys() for faster O(1) dictionary lookup
             if word in words: 
                 index = words[word]
-                cpu_embeddings[index] = numpy.array(vector, dtype=numpy.float32)[:dimensions]
+                cpu_embeddings[index] = np.array(vector, dtype=np.float32)[:dimensions]
                 
     # 2. Transfer the complete matrix to the GPU once
-    gpu_embeddings = np.asarray(cpu_embeddings)
+    gpu_embeddings = cp.asarray(cpu_embeddings)
     return gpu_embeddings
 
 def word_to_ind(corpus, pad_val):

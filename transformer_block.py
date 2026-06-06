@@ -1,4 +1,4 @@
-import cupy as np
+import cupy as cp
 import Attention.attention_block as ab
 import feed_forward as ff
 import layer_norm as ln
