@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as np
 import costs_and_activations as caa
 
 class attention_head(object):

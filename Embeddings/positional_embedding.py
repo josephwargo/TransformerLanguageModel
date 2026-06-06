@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as np
 
 
 class positional_embedding(object):

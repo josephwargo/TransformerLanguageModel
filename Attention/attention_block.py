@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as np
 import Attention.attention_head as ah
 
 class attention_block(object):

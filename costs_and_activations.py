@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as np
 
 # functions to compute costs and gradients of costs
 def MSE(y, y_pred):

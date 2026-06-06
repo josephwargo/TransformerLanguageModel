@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as np
 import feed_forward as ff
 import costs_and_activations as caa
 import Embeddings.positional_embedding as pe
