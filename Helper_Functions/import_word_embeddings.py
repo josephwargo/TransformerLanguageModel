@@ -28,12 +28,6 @@ def download_word_embeddings(repo_id, filename_zipped, filename_unzipped):
             zip_ref.extract(filename_unzipped, path=extraction_dir)
     return embeddings_filepath
 
-
-
-def parse_corpus(dataset, start_token, end_token, num_samples):
-    files = dataset["train"]["text"][:num_samples]
-    return [[start_token] + [re.sub(r'[^\w]', '', w.lower()) for w in f.split(" ")] + [end_token] for f in files]
-
 def get_embeddings_for_corpus(filepath, words, dimensions):
     vocab_size = len(words)
     
@@ -51,14 +45,3 @@ def get_embeddings_for_corpus(filepath, words, dimensions):
     # 2. Transfer the complete matrix to the GPU once
     gpu_embeddings = cp.asarray(cpu_embeddings)
     return gpu_embeddings
-
-def word_to_ind(corpus, pad_val):
-
-    corpus_words = [y for x in corpus for y in x]
-    corpus_words = list(set(corpus_words))
-    word2ind={}
-    for i in range(len(corpus_words)+1):
-        word2ind[corpus_words[i-1]] = i
-    word2ind[pad_val] = 0
-
-    return word2ind
