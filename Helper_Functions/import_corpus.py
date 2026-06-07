@@ -12,7 +12,6 @@ def parse_corpus(dataset, start_token, end_token, num_samples):
     return [[start_token] + [re.sub(r'[^\w]', '', w.lower()) for w in f.split(" ")] + [end_token] for f in files]
 
 def word_to_ind(corpus, pad_val):
-
     corpus_words = [y for x in corpus for y in x]
     corpus_words = list(set(corpus_words))
     word2ind={}
@@ -22,7 +21,9 @@ def word_to_ind(corpus, pad_val):
 
     return word2ind
 
-def ind_to_word(corpus):
+def ind_to_word(corpus, pad_val):
     corpus_words = [y for x in corpus for y in x]
     corpus_words = list(set(corpus_words))
+
+    corpus_words.insert(0, pad_val)
     return corpus_words

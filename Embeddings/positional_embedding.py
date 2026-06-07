@@ -1,6 +1,5 @@
 import cupy as cp
 
-
 class positional_embedding(object):
 ####################################
 # Initializations #

@@ -16,7 +16,6 @@ class transformer(object):
 ####################################
     def __init__(
           self
-        # , embeddings, word2ind
         , embeddings
         , input_layer_shape, input_layer_activation
         , d_model, hidden_layer_activations
