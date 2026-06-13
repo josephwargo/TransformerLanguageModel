@@ -7,8 +7,11 @@ from datasets import load_dataset
 from huggingface_hub import hf_hub_download
 
 
-def parse_corpus(dataset, start_token, end_token, num_samples):
-    files = dataset["train"]["text"][:num_samples]
+def parse_corpus(dataset, start_token, end_token, num_samples=None):
+    if num_samples is not None:
+        files = dataset["train"]["text"][:num_samples]
+    else:
+        files = dataset["train"]["text"]
     return [[start_token] + [re.sub(r'[^\w]', '', w.lower()) for w in f.split(" ")] + [end_token] for f in files]
 
 def word_to_ind(corpus, pad_val):
