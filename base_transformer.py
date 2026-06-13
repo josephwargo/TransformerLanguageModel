@@ -34,14 +34,6 @@ class transformer(object):
         if adam & (learning_rate>.01):
             print('Warning: Learning rate may be too high for ADAM optimizer to function properly')
        
-        # variables straight from initialization
-        # embeddings
-        # self.embeddings = embeddings
-        # self.corpus = corpus
-        # self.word2ind = word2ind
-        # self.word2ind_mapper = cp.vectorize(word2ind.get)
-        # self.embeddings_shape = embeddings.shape[1]
-        # self.num_embeddings = embeddings.shape[0]
 
         # layer details
         self.input_layer_shape = input_layer_shape
@@ -50,7 +42,6 @@ class transformer(object):
         self.hidden_layer_activations = hidden_layer_activations
         self.hidden_layer_num_heads = hidden_layer_num_heads
         self.output_shape = output_shape
-        # self.output_layer_activation = output_layer_activation
         
         # hyperparameters
         self.epochs = epochs
@@ -59,15 +50,7 @@ class transformer(object):
         self.learning_rate = cp.float32(learning_rate)
         self.loss_function = loss_function
         self.clip_val = cp.float32(clip_val)
-        self.activations = hidden_layer_activations# + [output_layer_activation]
-
-        # loss
-        # self.localLoss = []
-        # self.loss = []
-        # self.lossGradients = []
-
-        # layers
-        # self.layers = []
+        self.activations = hidden_layer_activations
         
 ####################################
 # Init Input Layer
@@ -147,7 +130,6 @@ class transformer(object):
 ####################################
 # Backward Pass #
 ####################################
-
     def backward_pass(self, logits, Y, pad_token_ind=0):
 
         dL_dY = self.output_layer.backward_pass(self.learning_rate, logits=logits, Y=Y, pad_token_ind=pad_token_ind)
@@ -188,8 +170,9 @@ class transformer(object):
 
 
 ####################################
-# Misc Functions #
+# Saving trained model #
 ####################################
+    # creates a dictionary that has all weights and biases for the corresponding layers + configs necessary to recreate the model
     def get_model_dict(self):
         model_dict = {}
 
@@ -239,6 +222,7 @@ class transformer(object):
 
         return model_dict, config
 
+    # saving dict of model to filepath
     def save_model(self, file_path):
         model_dict, config = self.get_model_dict()
 
@@ -247,6 +231,7 @@ class transformer(object):
 
         cp.savez_compressed(f'{file_path}/model.npz', **model_dict)
 
+    # recreating model from dict so it can be queried or further trained using same setup
     def load_model(self, file_path):
         with open(f'{file_path}/config.json', 'r') as f:
             config = json.load(f)
