@@ -33,9 +33,10 @@ def ind_to_word(corpus, pad_val):
 
 def chunk_corpus(corpus, max_text_len):
     corpus_copy = corpus.copy()
-    for text in corpus_copy:
+    for text, index in enumerate(corpus_copy):
         if len(text) > max_text_len:
             text = text[:max_text_len]
+            corpus_copy[index] = text
             remaining_text = text[max_text_len:]
             corpus_copy.append(remaining_text)
     return corpus_copy
