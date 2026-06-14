@@ -12,14 +12,14 @@ def parse_corpus(dataset, start_token, end_token, num_samples=None):
         files = dataset["train"]["text"][:num_samples]
     else:
         files = dataset["train"]["text"]
-    return [[start_token] + [re.sub(r'[^\w]', '', w.lower()) for w in f.split(" ")] + [end_token] for f in files]
+    corpus = [[start_token] + [re.sub(r'[^\w]', '', w.lower()) for w in f.split(" ")] + [end_token] for f in files]
+    return corpus
 
 def word_to_ind(corpus, pad_val):
     corpus_words = [y for x in corpus for y in x]
     corpus_words = list(set(corpus_words))
-    word2ind={}
-    for i in range(len(corpus_words)+1):
-        word2ind[corpus_words[i-1]] = i
+
+    word2ind={word: i for i, word in enumerate(corpus_words, start=1)}
     word2ind[pad_val] = 0
 
     return word2ind
