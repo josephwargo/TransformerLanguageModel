@@ -7,7 +7,7 @@ class neuron_layer(object):
 # Initializations #
 ####################################
     def __init__(self, input_shape, output_shape, activation,
-                 clip_val, is_output_layer=False, adam=False):
+                 clip_val, is_output_layer=False, adam=False, weight_decay=None):
 
         # layer info 
         self.input_shape = input_shape # length of vector that will be inputted into the weights
@@ -35,17 +35,7 @@ class neuron_layer(object):
         # TODO: implement
         self.adam = adam
         if adam:
-            # constants
-            self.beta1 = .9
-            self.beta2 = .999
-            self.epsilon = 1e-8
-            self.t = 1
-            # arrays to store 
-            self.md_layer_weights = cp.zeros(shape=(self.input_shape,self.output_shape)).astype(cp.float32)
-            self.vd_layer_weights = cp.zeros(shape=(self.input_shape,self.output_shape)).astype(cp.float32)
-
-            self.md_bias = cp.zeros(shape=(output_shape)).astype(cp.float32)         
-            self.vd_bias = cp.zeros(shape=(output_shape)).astype(cp.float32)
+            pass
 
 
 ####################################
@@ -127,30 +117,3 @@ class neuron_layer(object):
 
     # TODO: update update_adam - this is leftover from RNN
 
-    # def update_adam(self):
-    #     print("adam")
-    #     # doing ^t on beta1 and beta2 once per step
-    #     b1T = self.beta1**self.t
-    #     b2T = self.beta2**self.t
-        
-    #     # layer weights
-    #     # momentum stored
-    #     self.md_layer_weights *= self.beta1
-    #     self.md_layer_weights += (1-self.beta1)*self.layer_weight_updates
-    #     # RMSProp stored
-    #     self.vd_layer_weights *= self.beta2
-    #     self.vd_layer_weights += (1-self.beta2)*(self.layer_weight_updates**2)
-    #     # updates (incl. corrections and Adam)
-    #     self.layer_weights += -self.learning_rate * (self.md_layer_weights / (1-b1T) / (cp.sqrt(self.vd_layer_weights / (1-b2T))+self.epsilon))
-
-    #     # bias
-    #     # momentum stored
-    #     self.md_bias *= self.beta1
-    #     self.md_bias += (1-self.beta1)*self.bias_updates
-    #     # RMSProp stored
-    #     self.vd_bias *= self.beta2
-    #     self.vd_bias += (1-self.beta2)*(self.bias_updates**2)
-    #     # update (incl. corrections and Adam)
-    #     self.bias += -self.learning_rate * (self.md_bias / (1-b1T) / (cp.sqrt(self.vd_bias / (1-b2T))+self.epsilon))
-
-    #     self.t+=1 # increment

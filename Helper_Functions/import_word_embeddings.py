@@ -6,11 +6,6 @@ import cupy as cp
 from datasets import load_dataset
 from huggingface_hub import hf_hub_download
 
-# constants
-# START_TOKEN = '<START>'
-# END_TOKEN = '<END>'
-# NUM_SAMPLES = 10000
-
 def download_word_embeddings(repo_id, filename_zipped, filename_unzipped):
     print("Downloading GloVe embeddings from Hugging Face...")
     glove_zip_path = hf_hub_download(
