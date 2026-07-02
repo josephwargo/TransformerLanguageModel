@@ -26,6 +26,8 @@ class attention_block(object):
         xavier_val = cp.sqrt(2/(self.d_model+self.d_model))
         self.W_o = cp.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(cp.float32) # does not matter whether in_dim or out_dim is first as both are d_model
 
+        self.dL_dW_o = cp.zeros_like(self.W_o)
+
         # hidden state
         self.hidden_state = None
         self.prev_layer_output = None
@@ -59,7 +61,7 @@ class attention_block(object):
         dL_dZ_flat = dL_dY.reshape(-1, dL_dY.shape[-1])
         # dL_dW for W_o
         prev_layer_output_flat = self.prev_layer_output.reshape(-1, self.prev_layer_output.shape[-1])
-        dL_dW_o = dL_dZ_flat.T @ prev_layer_output_flat
+        self.dL_dW_o = dL_dZ_flat.T @ prev_layer_output_flat
 
         # dL_dZ = dL_dY because there is no activation
         dL_dAttn_score = dL_dY @ self.W_o.T
@@ -75,9 +77,11 @@ class attention_block(object):
         # backward pass of the attention head
         dL_dAttn_Block = self.head.backward_pass(learning_rate, dL_dAttn_score_4d)
 
-        self.update(learning_rate, dL_dW_o)
+        self.update(learning_rate)#, dL_dW_o)
 
         return dL_dAttn_Block
 
-    def update(self, learning_rate, dL_dW_o):
-        self.W_o += -learning_rate * dL_dW_o
+    def update(self, learning_rate):#, dL_dW_o):
+        self.W_o += -learning_rate * self.dL_dW_o
+
+        self.dL_dW_o.fill(0)

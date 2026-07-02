@@ -34,6 +34,11 @@ class attention_head(object):
         # for storing during train forward pass
         self.softmax_masked_score = None
 
+        # storing grads
+        self.dL_dW_q = cp.zeros_like(self.W_q)
+        self.dL_dW_k = cp.zeros_like(self.W_k)
+        self.dL_dW_v = cp.zeros_like(self.W_v)
+
 ####################################
 # Forward Pass #
 ####################################
@@ -101,9 +106,9 @@ class attention_head(object):
         dL_dk_flat_1 = dL_dk.transpose(0,2,1,3).reshape(-1, self.d_model)
         dL_dv_flat_1 = dL_dv.transpose(0,2,1,3).reshape(-1, self.d_model)
 
-        dL_dW_q = dL_dq_flat_1.T @ prev_layer_output_flat
-        dL_dW_k = dL_dk_flat_1.T @ prev_layer_output_flat
-        dL_dW_v = dL_dv_flat_1.T @ prev_layer_output_flat
+        self.dL_dW_q = dL_dq_flat_1.T @ prev_layer_output_flat
+        self.dL_dW_k = dL_dk_flat_1.T @ prev_layer_output_flat
+        self.dL_dW_v = dL_dv_flat_1.T @ prev_layer_output_flat
 
         # dL_dY output of the head - sum of dL_dY_q, dL_dY_k, and dL_dY_v
         # flattening to be 3d to pass back dL_dY
@@ -118,12 +123,16 @@ class attention_head(object):
         # taking the sume of all 3 to get the true dL_dY - this is mathmematically consistent with the chain rule
         dL_dAttn_head = dL_dAttn_head_q + dL_dAttn_head_k + dL_dAttn_head_v
 
-        self.update(learning_rate, dL_dW_q, dL_dW_k, dL_dW_v)#, batch_size)
+        self.update(learning_rate)#, dL_dW_q, dL_dW_k, dL_dW_v)#, batch_size)
 
         return dL_dAttn_head
 
-    def update(self, learning_rate, dL_dW_q, dL_dW_k, dL_dW_v):
+    def update(self, learning_rate):#, dL_dW_q, dL_dW_k, dL_dW_v):
         
-        self.W_q += -learning_rate * dL_dW_q
-        self.W_k += -learning_rate * dL_dW_k
-        self.W_v += -learning_rate * dL_dW_v
+        self.W_q += -learning_rate * self.dL_dW_q
+        self.W_k += -learning_rate * self.dL_dW_k
+        self.W_v += -learning_rate * self.dL_dW_v
+
+        self.dL_dW_q.fill(0)
+        self.dL_dW_k.fill(0)
+        self.dL_dW_v.fill(0)

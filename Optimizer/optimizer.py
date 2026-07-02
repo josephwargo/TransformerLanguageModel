@@ -2,27 +2,29 @@ import numpy as np
 import cupy as cp
 import scheduler as sch
 
-class adam(object):
+class optimizer(object):
 ####################################
 # Initializations #
 ####################################
-    def __init__(self, input_shape, output_shape,weight_decay=None):
-        # constants
-        self.beta1 = .9
-        self.beta2 = .999
-        self.epsilon = 1e-8
-        self.t = 1
+    def __init__(self, weight_decay=None, adamW=False, input_shape=None, output_shape=None):
         if weight_decay is not None:
             self.weight_decay = weight_decay
         else:
             self.weight_decay = .01
         # arrays to store 
-        # momentum
-        self.md_layer_weights = cp.zeros(shape=(input_shape,output_shape)).astype(cp.float32)
-        self.vd_layer_weights = cp.zeros(shape=(input_shape,output_shape)).astype(cp.float32)
-        # variance
-        self.md_bias = cp.zeros(shape=(output_shape)).astype(cp.float32)         
-        self.vd_bias = cp.zeros(shape=(output_shape)).astype(cp.float32)
+        
+        if adamW:
+            # constants
+            self.beta1 = .9
+            self.beta2 = .999
+            self.epsilon = 1e-8
+            self.t = 1
+            # momentum
+            self.md_layer_weights = cp.zeros(shape=(input_shape,output_shape)).astype(cp.float32)
+            self.vd_layer_weights = cp.zeros(shape=(input_shape,output_shape)).astype(cp.float32)
+            # variance
+            self.md_bias = cp.zeros(shape=(output_shape)).astype(cp.float32)         
+            self.vd_bias = cp.zeros(shape=(output_shape)).astype(cp.float32)
 
     def update_adam(self, learning_rate, dL_dW, dL_db):
             print("adam")

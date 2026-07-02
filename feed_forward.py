@@ -15,7 +15,6 @@ class neuron_layer(object):
         layer_xavier = cp.sqrt(2/(self.input_shape+self.output_shape)) # value used to determine optimal
         # shape is (out_dim, in_dim) for hardware optimization. this is NOT untuitive
         self.layer_weights = cp.random.normal(0,layer_xavier, size=(self.output_shape, self.input_shape)).astype(cp.float32)
-
         self.bias = cp.zeros(shape=(output_shape)).astype(cp.float32) # initializing bias as 0s - no xavier here
 
         # activation
@@ -30,6 +29,9 @@ class neuron_layer(object):
 
         # type of layer
         self.is_output_layer = is_output_layer
+
+        self.dL_dW = cp.zeros_like(self.layer_weights)
+        self.dL_db = cp.zeros_like(self.bias)
 
         # adam
         # TODO: implement
@@ -94,16 +96,16 @@ class neuron_layer(object):
         # dL_dW - requries flattening the previous layer hidden state and using the flattened dL_dZ
         prev_layer_output_flat = self.prev_layer_output.reshape(-1, self.prev_layer_output.shape[-1])
         
-        dL_dW = dL_dZ_flat.T @ prev_layer_output_flat
+        self.dL_dW = dL_dZ_flat.T @ prev_layer_output_flat
 
         # dL_db
-        dL_db = cp.sum(dL_dZ, axis=(0,1))
+        self.dL_db = cp.sum(dL_dZ, axis=(0,1))
         
-        self.update(learning_rate, dL_dW, dL_db)
+        self.update(learning_rate)#, dL_dW, dL_db)
 
         return dL_dx
 
-    def update(self, learning_rate, dL_dW, dL_db):
+    def update(self, learning_rate):#, dL_dW, dL_db):
         # clipping
         # cp.clip(self.layer_weight_updates, -self.clip_val, self.clip_val, out=self.layer_weight_updates)
         # cp.clip(self.bias_updates, -self.clip_val, self.clip_val, out=self.bias_updates)
@@ -111,9 +113,12 @@ class neuron_layer(object):
         # adam
         # if self.adam:
         #     self.update_adam()
-        
-        self.layer_weights += -learning_rate * dL_dW
-        self.bias += -learning_rate * dL_db
+        # else:
+        self.layer_weights += -learning_rate * self.dL_dW
+        self.bias += -learning_rate * self.dL_db
 
-    # TODO: update update_adam - this is leftover from RNN
+        self.dL_dW.fill(0)
+        self.dL_db.fill(0)
+
+    
 
