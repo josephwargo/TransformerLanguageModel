@@ -29,7 +29,7 @@ class positional_embedding(object):
         # summing across batch axis so we can update pos embeddings
         # which are shape max_seq_len = maximum possible tokens x input_layer_shape
         # = shape of input token embeddings
-        self.dL_dE[:self.dL_dY.shape[0]] += cp.sum(dL_dY, axis=0)
+        self.dL_dE[:dL_dY.shape[0]] += cp.sum(dL_dY, axis=0)
 
 
         # returning so we can pass back to input layer
