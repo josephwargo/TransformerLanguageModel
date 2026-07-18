@@ -34,7 +34,7 @@ class positional_embedding(object):
         print()
         print("dL_dY")
         print(dL_dY.shape)
-        self.dL_dE[:dL_dY.shape[0]] += cp.sum(dL_dY, axis=0)
+        self.dL_dE[:dL_dY.shape[0]] += cp.sum(dL_dY, axis=1)
 
 
         # returning so we can pass back to input layer
