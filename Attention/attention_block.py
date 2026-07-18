@@ -61,7 +61,7 @@ class attention_block(object):
         dL_dZ_flat = dL_dY.reshape(-1, dL_dY.shape[-1])
         # dL_dW for W_o
         prev_layer_output_flat = self.prev_layer_output.reshape(-1, self.prev_layer_output.shape[-1])
-        self.dL_dW_o += dL_dZ_flat.T @ prev_layer_output_flat
+        self.dL_dW_o += prev_layer_output_flat.T @ dL_dZ_flat.T
 
         # dL_dZ = dL_dY because there is no activation
         dL_dAttn_score = dL_dY @ self.W_o.T
@@ -86,5 +86,4 @@ class attention_block(object):
 
     def clear_grad(self):
         self.dL_dW_o.fill(0)
-        print(self.dL_dW_o)
         self.head.clear_grad()

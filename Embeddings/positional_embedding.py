@@ -11,7 +11,7 @@ class positional_embedding(object):
         self.max_seq_len = max_seq_len
         self.input_layer_shape = input_layer_shape
 
-        self.embeddings = cp.random.normal(0, .02, size=(self.max_seq_len, input_layer_shape))
+        self.embeddings = cp.random.normal(0, .02, size=(self.max_seq_len, input_layer_shape)).astype(cp.float32)
 
         self.dL_dE = cp.zeros_like(self.embeddings)
 

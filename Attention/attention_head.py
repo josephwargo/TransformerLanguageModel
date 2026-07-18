@@ -14,7 +14,7 @@ class attention_head(object):
         self.dim_sqrt = cp.sqrt(self.head_dimension)
 
         # initialization of weights - using only Xavier for now
-        self.dim_for_xavier = self.d_model + self.head_dimension
+        self.dim_for_xavier = self.d_model + self.d_model
         xavier_val = cp.sqrt(2/(self.dim_for_xavier))
 
         # instead of having separate heads, initiating each weight matrix with the shape (d_model, d_model), as this is mathematically equivalent to having separate heads
