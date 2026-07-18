@@ -5,7 +5,7 @@ class attention_block(object):
 ####################################
 # Initializations #
 ####################################
-    def __init__(self, num_heads, d_model):
+    def __init__(self, num_heads, d_model, clip_val):
         if d_model%num_heads != 0:
             raise Exception('Error: Attention Block input shape not divisible by number of heads.')
         
@@ -19,7 +19,7 @@ class attention_block(object):
         # for head_num in range(self.num_heads):
         #     head_name = f"head_{head_num}"
         #     self.heads[head_name] = ah.attention_head(self.d_model, self.head_output_dimension)
-        self.head = ah.attention_head(self.num_heads, self.d_model)
+        self.head = ah.attention_head(self.num_heads, self.d_model, clip_val)
         
         # weights to aggregate heads
         # initialization of weights - using only Xavier for now
@@ -80,6 +80,8 @@ class attention_block(object):
         return dL_dAttn_Block
 
     def update(self, learning_rate):
+        # clipping
+        cp.clip(self.dL_dW_o, -self.clip_val, self.clip_val, out=self.dL_dW_o)
         self.W_o += -learning_rate * self.dL_dW_o
 
         self.head.update(learning_rate)

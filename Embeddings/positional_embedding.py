@@ -5,11 +5,12 @@ class positional_embedding(object):
 # Initializations #
 ####################################
     def __init__(
-            self, max_seq_len, input_layer_shape
+            self, max_seq_len, input_layer_shape, clip_val
         ):
-        
+
         self.max_seq_len = max_seq_len
         self.input_layer_shape = input_layer_shape
+        self.clip_val = clip_val
 
         self.embeddings = cp.random.normal(0, .02, size=(self.max_seq_len, input_layer_shape)).astype(cp.float32)
 
@@ -36,8 +37,7 @@ class positional_embedding(object):
 
     
     def update(self, learning_rate):
-        # updating embeddings inplace
-        # self.embeddings[:self.dL_dE.shape[0]] += -learning_rate * self.dL_dE
+        cp.clip(self.dL_dE, -self.clip_val, self.clip_val, out=self.dL_dE)
         self.embeddings += -learning_rate * self.dL_dE
 
     def clear_grad(self):

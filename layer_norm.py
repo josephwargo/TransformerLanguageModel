@@ -4,8 +4,10 @@ class layer_norm(object):
 ####################################
 # Initializations #
 ####################################
-    def __init__(self, input_size):
+    def __init__(self, input_size, clip_val):
         # self.batch_size = batch_size
+
+        self.clip_val = clip_val
 
         self.gamma = cp.ones(shape=input_size)
         self.beta = cp.zeros(shape=input_size)
@@ -21,8 +23,6 @@ class layer_norm(object):
 # Forward Pass #
 ####################################
     def x_hat(self, x, train=False):
-        if train:
-            self.prev_layer_output = x
 
         x_mean = cp.mean(x, axis=-1, keepdims=True)
         x_std_dev = cp.sqrt(cp.var(x, axis=-1, keepdims=True) + 1e-5)
@@ -67,6 +67,10 @@ class layer_norm(object):
         return dL_dx
 
     def update(self, learning_rate):
+        # clipping
+        cp.clip(self.dL_dgamma, -self.clip_val, self.clip_val, out=self.dL_dgamma)
+        cp.clip(self.dL_dbeta, -self.clip_val, self.clip_val, out=self.dL_dbeta)
+
         self.gamma += -learning_rate * self.dL_dgamma
         self.beta += -learning_rate * self.dL_dbeta
 

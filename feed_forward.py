@@ -105,8 +105,8 @@ class neuron_layer(object):
 
     def update(self, learning_rate):
         # clipping
-        # cp.clip(self.layer_weight_updates, -self.clip_val, self.clip_val, out=self.layer_weight_updates)
-        # cp.clip(self.bias_updates, -self.clip_val, self.clip_val, out=self.bias_updates)
+        cp.clip(self.dL_dW, -self.clip_val, self.clip_val, out=self.dL_dW)
+        cp.clip(self.dL_db, -self.clip_val, self.clip_val, out=self.dL_db)
 
         # adam
         # if self.adam:

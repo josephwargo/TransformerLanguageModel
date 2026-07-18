@@ -5,11 +5,13 @@ class attention_head(object):
 ####################################
 # Initializations #
 ####################################
-    def __init__(self, num_heads, d_model):
+    def __init__(self, num_heads, d_model, clip_val):
         
         # storing dimensions
         self.num_heads = num_heads
         self.d_model = d_model
+        self.clip_val = clip_val
+
         self.head_dimension = int(self.d_model / self.num_heads)
         self.dim_sqrt = cp.sqrt(self.head_dimension)
 
@@ -126,6 +128,11 @@ class attention_head(object):
         return dL_dAttn_head
 
     def update(self, learning_rate):
+        # clipping
+        cp.clip(self.dL_dW_q, -self.clip_val, self.clip_val, out=self.dL_dW_q)
+        cp.clip(self.dL_dW_k, -self.clip_val, self.clip_val, out=self.dL_dW_k)
+        cp.clip(self.dL_dW_v, -self.clip_val, self.clip_val, out=self.dL_dW_v)
+
         self.W_q += -learning_rate * self.dL_dW_q
         self.W_k += -learning_rate * self.dL_dW_k
         self.W_v += -learning_rate * self.dL_dW_v

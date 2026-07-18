@@ -21,15 +21,15 @@ class transformer_block(object):
         self.adam = adam
 
         # first layer norm
-        self.layer_norm_1 = ln.layer_norm(self.d_model)
+        self.layer_norm_1 = ln.layer_norm(self.d_model, clip_val)
 
         # self-attention
         self.self_attention = ab.attention_block(
-              num_heads=num_heads, d_model=self.d_model
+              num_heads=num_heads, d_model=self.d_model, clip_val
         )
 
         # second layer norm
-        self.layer_norm_2 = ln.layer_norm(self.d_model)
+        self.layer_norm_2 = ln.layer_norm(self.d_model, clip_val)
 
         # feed forward
         self.feed_forward_layer = ff.neuron_layer(
