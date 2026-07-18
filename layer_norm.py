@@ -48,10 +48,10 @@ class layer_norm(object):
 ####################################
 # Backward Pass #
 ####################################    
-    def backward_pass(self, learning_rate, dL_dY):
+    def backward_pass(self, dL_dY):
         # gradients to update gamma and beta
-        self.dL_dgamma = (dL_dY * self.x_hat_val).sum(axis=(0,1))
-        self.dL_dbeta = dL_dY.sum(axis=(0,1))
+        self.dL_dgamma += (dL_dY * self.x_hat_val).sum(axis=(0,1))
+        self.dL_dbeta += dL_dY.sum(axis=(0,1))
 
         # gradient to pass back into normalization step
         dL_dx_hat = dL_dY * self.gamma
@@ -64,13 +64,12 @@ class layer_norm(object):
         
         dL_dx = (dL_dx_hat_direct - dL_dx_hat_mean_penalty - dL_dx_hat_variance_penalty) / (self.x_std_dev * dL_dY.shape[-1])
 
-        self.update(learning_rate)#, dL_dgamma, dL_dbeta)
-
         return dL_dx
 
-    def update(self, learning_rate):#, dL_dgamma, dL_dbeta):
+    def update(self, learning_rate):
         self.gamma += -learning_rate * self.dL_dgamma
         self.beta += -learning_rate * self.dL_dbeta
 
+    def clear_grad(self):
         self.dL_dgamma.fill(0)
         self.dL_dbeta.fill(0)

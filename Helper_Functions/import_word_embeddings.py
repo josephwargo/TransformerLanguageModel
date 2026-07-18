@@ -32,11 +32,11 @@ def get_embeddings_for_corpus(filepath, words, dimensions):
     with open(filepath, encoding="utf8") as f:
         for line in f:
             word, *vector = line.split()
-            # Removed .keys() for faster O(1) dictionary lookup
+
             if word in words: 
                 index = words[word]
                 cpu_embeddings[index] = np.array(vector, dtype=np.float32)[:dimensions]
                 
-    # 2. Transfer the complete matrix to the GPU once
+    # transfer to cupy
     gpu_embeddings = cp.asarray(cpu_embeddings)
     return gpu_embeddings

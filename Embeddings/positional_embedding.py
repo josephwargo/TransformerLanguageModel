@@ -25,21 +25,20 @@ class positional_embedding(object):
 ####################################
 # Backward Pass #
 ####################################
-    def backward_pass(self, learning_rate, dL_dY):
+    def backward_pass(self, dL_dY):
         # summing across batch axis so we can update pos embeddings
         # which are shape max_seq_len = maximum possible tokens x input_layer_shape
         # = shape of input token embeddings
-        self.dL_dE = cp.sum(dL_dY, axis=0)
+        self.dL_dE += cp.sum(dL_dY, axis=0)
 
-        self.update(learning_rate)#, dL_dE)
 
         # returning so we can pass back to input layer
         return dL_dY
 
     
-    def update(self, learning_rate):#, dL_dE):
- 
+    def update(self, learning_rate):
         # updating embeddings inplace
         self.embeddings[:self.dL_dE.shape[0]] += -learning_rate * self.dL_dE
 
+    def clear_grad(self):
         self.dL_dE.fill(0)

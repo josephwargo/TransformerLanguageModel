@@ -75,6 +75,10 @@ class transformer(object):
                 , clip_val=self.clip_val
                 , adam=self.adam
             )
+        
+        # backwards list to iterate through during backwards pass
+        self.rev_transformer_layers = list(self.transformer_layers.keys())
+        self.rev_transformer_layers.reverse()
 
 ####################################
 # Init Output Layer #
@@ -132,21 +136,46 @@ class transformer(object):
 ####################################
     def backward_pass(self, logits, Y, pad_token_ind=0):
 
-        dL_dY = self.output_layer.backward_pass(self.learning_rate, logits=logits, Y=Y, pad_token_ind=pad_token_ind)
+        dL_dY = self.output_layer.backward_pass(logits=logits, Y=Y, pad_token_ind=pad_token_ind)
 
-        dL_dY = self.output_layer_norm.backward_pass(self.learning_rate, dL_dY)
+        dL_dY = self.output_layer_norm.backward_pass(dL_dY)
 
-        # reversing order of transformer dict for backwards pass
-        rev_transformer_layers = list(self.transformer_layers.keys())
-        rev_transformer_layers.reverse()
-        
-        for layer_name in rev_transformer_layers:
+        for layer_name in self.rev_transformer_layers:
             transformer_block = self.transformer_layers[layer_name]
-            dL_dY = transformer_block.backward_pass(self.learning_rate, dL_dY)
+            dL_dY = transformer_block.backward_pass(dL_dY)
 
         # input layer
-        dL_dY = self.positional_embeddings.backward_pass(self.learning_rate, dL_dY)
-        dL_dY = self.input_layer.backward_pass(self.learning_rate, dL_dY=dL_dY, pad_token_ind=pad_token_ind)
+        dL_dY = self.positional_embeddings.backward_pass(dL_dY)
+        dL_dY = self.input_layer.backward_pass(dL_dY=dL_dY, pad_token_ind=pad_token_ind)
+
+        # updating - will not clear grads here, will leave as option during training run in case we want to accumulate grads
+
+####################################
+# Gradient updates and clearing - all at once #
+####################################
+    def update(self):
+        self.output_layer.update(self.learning_rate)
+        self.output_layer_norm.update(self.learning_rate)
+        self.output_layer.update(self.learning_rate)
+
+        for layer_name in self.rev_transformer_layers:
+            transformer_block = self.transformer_layers[layer_name]
+            transformer_block.update(self.learning_rate)
+        
+        self.positional_embeddings.update(self.learning_rate)
+        self.input_layer.update(self.learning_rate)
+
+    def clear_grad(self):
+        self.output_layer.clear_grad()
+        self.output_layer_norm.clear_grad()
+        self.output_layer.clear_grad()
+
+        for layer_name in self.rev_transformer_layers:
+            transformer_block = self.transformer_layers[layer_name]
+            transformer_block.clear_grad()
+        
+        self.positional_embeddings.clear_grad()
+        self.input_layer.clear_grad()
 
 ####################################
 # Training #
@@ -173,19 +202,24 @@ class transformer(object):
 # Saving trained model #
 ####################################
     # creates a dictionary that has all weights and biases for the corresponding layers + configs necessary to recreate the model
-    def get_model_dict(self):
+    def get_model_dict(self, mode=None):
         model_dict = {}
 
-        # input layer
-        model_dict['input_layer_weights'] = self.input_layer.layer_weights
-        model_dict['input_layer_biases'] = self.input_layer.bias
+        input_layer_dict = {}
+        # input layer dict
+        input_layer_dict['input_layer_weights'] = self.input_layer.layer_weights
+        input_layer_dict['input_layer_biases'] = self.input_layer.bias
+
+        model_dict['input_layer_dict'] = input_layer_dict
 
         # pos embeddings
         model_dict['positional_embeddings'] = self.positional_embeddings.embeddings
 
         # transformer layers
+        transformer_dict = {}
         for layer_name, block in self.transformer_layers.items():
-            # layer norm 1
+            transformer_dict = transformer_dict.copy()
+            # layer norm 1 
             model_dict[f'{layer_name}_layer_norm_1_gamma'] = block.layer_norm_1.gamma
             model_dict[f'{layer_name}_layer_norm_1_beta'] = block.layer_norm_1.beta
 

@@ -56,12 +56,12 @@ class attention_block(object):
 ####################################
 # Backward Pass #
 ####################################
-    def backward_pass(self, learning_rate, dL_dY):
+    def backward_pass(self, dL_dY):
         # dL_dZ = dL_dY because there is no activation
         dL_dZ_flat = dL_dY.reshape(-1, dL_dY.shape[-1])
         # dL_dW for W_o
         prev_layer_output_flat = self.prev_layer_output.reshape(-1, self.prev_layer_output.shape[-1])
-        self.dL_dW_o = dL_dZ_flat.T @ prev_layer_output_flat
+        self.dL_dW_o += dL_dZ_flat.T @ prev_layer_output_flat
 
         # dL_dZ = dL_dY because there is no activation
         dL_dAttn_score = dL_dY @ self.W_o.T
@@ -75,13 +75,15 @@ class attention_block(object):
         dL_dAttn_score_4d = dL_dAttn_score_4d.transpose(0,2,1,3)
         
         # backward pass of the attention head
-        dL_dAttn_Block = self.head.backward_pass(learning_rate, dL_dAttn_score_4d)
-
-        self.update(learning_rate)#, dL_dW_o)
+        dL_dAttn_Block = self.head.backward_pass(dL_dAttn_score_4d)
 
         return dL_dAttn_Block
 
-    def update(self, learning_rate):#, dL_dW_o):
+    def update(self, learning_rate):
         self.W_o += -learning_rate * self.dL_dW_o
 
+        self.head.update(learning_rate)
+
+    def clear_grad(self):
         self.dL_dW_o.fill(0)
+        self.head.clear_grad()

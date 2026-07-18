@@ -6,11 +6,8 @@ class optimizer(object):
 ####################################
 # Initializations #
 ####################################
-    def __init__(self, weight_decay=None, adamW=False, input_shape=None, output_shape=None):
-        if weight_decay is not None:
-            self.weight_decay = weight_decay
-        else:
-            self.weight_decay = .01
+    def __init__(self, weight_decay=.01, adamW=False, input_shape=None, output_shape=None):
+        self.weight_decay = weight_decay
         # arrays to store 
         
         if adamW:

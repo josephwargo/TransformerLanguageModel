@@ -65,7 +65,7 @@ class neuron_layer(object):
 ####################################
 # Backward Pass #
 ####################################
-    def backward_pass(self, learning_rate, dL_dY=None, logits=None, Y=None, pad_token_ind=0):
+    def backward_pass(self, dL_dY=None, logits=None, Y=None, pad_token_ind=0):
 
         if self.is_output_layer:
             
@@ -96,16 +96,14 @@ class neuron_layer(object):
         # dL_dW - requries flattening the previous layer hidden state and using the flattened dL_dZ
         prev_layer_output_flat = self.prev_layer_output.reshape(-1, self.prev_layer_output.shape[-1])
         
-        self.dL_dW = dL_dZ_flat.T @ prev_layer_output_flat
+        self.dL_dW += dL_dZ_flat.T @ prev_layer_output_flat
 
         # dL_db
-        self.dL_db = cp.sum(dL_dZ, axis=(0,1))
-        
-        self.update(learning_rate)#, dL_dW, dL_db)
+        self.dL_db += cp.sum(dL_dZ, axis=(0,1))
 
         return dL_dx
 
-    def update(self, learning_rate):#, dL_dW, dL_db):
+    def update(self, learning_rate):
         # clipping
         # cp.clip(self.layer_weight_updates, -self.clip_val, self.clip_val, out=self.layer_weight_updates)
         # cp.clip(self.bias_updates, -self.clip_val, self.clip_val, out=self.bias_updates)
@@ -116,7 +114,8 @@ class neuron_layer(object):
         # else:
         self.layer_weights += -learning_rate * self.dL_dW
         self.bias += -learning_rate * self.dL_db
-
+    
+    def clear_grad(self):
         self.dL_dW.fill(0)
         self.dL_db.fill(0)
 
