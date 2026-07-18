@@ -142,7 +142,7 @@ class transformer(object):
         for layer_name in self.rev_transformer_layers:
             transformer_block = self.transformer_layers[layer_name]
             dL_dY = transformer_block.backward_pass(dL_dY)
-
+        print(dL_dY.shape)
         # input layer
         dL_dY = self.positional_embeddings.backward_pass(dL_dY)
         dL_dY = self.input_layer.backward_pass(dL_dY=dL_dY, pad_token_ind=pad_token_ind)

@@ -29,8 +29,8 @@ class positional_embedding(object):
         # summing across batch axis so we can update pos embeddings
         # only updating gradients for positions that were in the seq_len
         print(dL_dY.shape)
-        # print(cp.sum(dL_dY, axis=0).shape)
-        self.dL_dE[:dL_dY.shape[0]] += cp.sum(dL_dY, axis=0)
+
+        self.dL_dE[:dL_dY.shape[1]] += cp.sum(dL_dY, axis=0)
 
         # returning so we can pass back to input layer
         return dL_dY
