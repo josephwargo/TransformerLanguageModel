@@ -148,7 +148,7 @@ class transformer(object):
         dL_dY = self.positional_embeddings.backward_pass(dL_dY)
         dL_dY = self.input_layer.backward_pass(dL_dY=dL_dY, pad_token_ind=pad_token_ind)
 
-        # updating - will not clear grads here, will leave as option during training run in case we want to accumulate grads
+        # leaving updates and clearing grads out, this is just a single instance of a backward pass and gradient accumulation
 
 ####################################
 # Gradient updates and clearing - all at once #
