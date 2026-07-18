@@ -84,7 +84,7 @@ class transformer(object):
 # Init Output Layer #
 ####################################
         output_layer_input_shape = self.d_model
-        self.output_layer_norm = ln.layer_norm(output_layer_input_shape)
+        self.output_layer_norm = ln.layer_norm(output_layer_input_shape, clip_val=clip_val)
         self.output_layer = ff.neuron_layer(
               input_shape=output_layer_input_shape, output_shape=self.output_shape
             , activation=None # activation is none so this returns the logits, we apply the activation later for gradients
