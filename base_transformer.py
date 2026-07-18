@@ -194,6 +194,8 @@ class transformer(object):
             print("")
             # backward pass
             dL_dY = self.backward_pass(logits=logits, Y=Y_batch)
+            self.update()
+            self.clear_grad()
             # mempool.free_all_blocks()
             # pinned_mempool.free_all_blocks()
 

@@ -27,15 +27,8 @@ class positional_embedding(object):
 ####################################
     def backward_pass(self, dL_dY):
         # summing across batch axis so we can update pos embeddings
-        # which are shape max_seq_len = maximum possible tokens x input_layer_shape
-        # = shape of input token embeddings
-        print("dL_dE")
-        print(self.dL_dE.shape)
-        print()
-        print("dL_dY")
-        print(dL_dY.shape)
+        # only updating gradients for positions that were in the seq_len
         self.dL_dE[:dL_dY.shape[0]] += cp.sum(dL_dY, axis=1)
-
 
         # returning so we can pass back to input layer
         return dL_dY
