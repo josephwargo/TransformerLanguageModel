@@ -1,11 +1,11 @@
-import numpy as np
+import cupy as cp
 import Attention.attention_head as ah
 
 class attention_block(object):
 ####################################
 # Initializations #
 ####################################
-    def __init__(self, num_heads, d_model):
+    def __init__(self, num_heads, d_model, clip_val):
         if d_model%num_heads != 0:
             raise Exception('Error: Attention Block input shape not divisible by number of heads.')
         
@@ -14,17 +14,21 @@ class attention_block(object):
         self.d_model = d_model
         self.head_output_dimension = int(d_model/num_heads)
 
+        self.clip_val = clip_val
+
         # dictionary to store heads
         # self.heads = {}
         # for head_num in range(self.num_heads):
         #     head_name = f"head_{head_num}"
         #     self.heads[head_name] = ah.attention_head(self.d_model, self.head_output_dimension)
-        self.head = ah.attention_head(self.num_heads, self.d_model)
+        self.head = ah.attention_head(self.num_heads, self.d_model, clip_val)
         
         # weights to aggregate heads
         # initialization of weights - using only Xavier for now
-        xavier_val = np.sqrt(2/(self.d_model+self.d_model))
-        self.W_o = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32) # does not matter whether in_dim or out_dim is first as both are d_model
+        xavier_val = cp.sqrt(2/(self.d_model+self.d_model))
+        self.W_o = cp.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(cp.float32) # does not matter whether in_dim or out_dim is first as both are d_model
+
+        self.dL_dW_o = cp.zeros_like(self.W_o)
 
         # hidden state
         self.hidden_state = None
@@ -54,12 +58,12 @@ class attention_block(object):
 ####################################
 # Backward Pass #
 ####################################
-    def backward_pass(self, learning_rate, dL_dY):
+    def backward_pass(self, dL_dY):
         # dL_dZ = dL_dY because there is no activation
         dL_dZ_flat = dL_dY.reshape(-1, dL_dY.shape[-1])
         # dL_dW for W_o
         prev_layer_output_flat = self.prev_layer_output.reshape(-1, self.prev_layer_output.shape[-1])
-        dL_dW_o = dL_dZ_flat.T @ prev_layer_output_flat
+        self.dL_dW_o += prev_layer_output_flat.T @ dL_dZ_flat
 
         # dL_dZ = dL_dY because there is no activation
         dL_dAttn_score = dL_dY @ self.W_o.T
@@ -73,11 +77,17 @@ class attention_block(object):
         dL_dAttn_score_4d = dL_dAttn_score_4d.transpose(0,2,1,3)
         
         # backward pass of the attention head
-        dL_dAttn_Block = self.head.backward_pass(learning_rate, dL_dAttn_score_4d)
-
-        self.update(learning_rate, dL_dW_o)
+        dL_dAttn_Block = self.head.backward_pass(dL_dAttn_score_4d)
 
         return dL_dAttn_Block
 
-    def update(self, learning_rate, dL_dW_o):
-        self.W_o += -learning_rate * dL_dW_o
+    def update(self, learning_rate):
+        # clipping
+        cp.clip(self.dL_dW_o, -self.clip_val, self.clip_val, out=self.dL_dW_o)
+        self.W_o += -learning_rate * self.dL_dW_o
+
+        self.head.update(learning_rate)
+
+    def clear_grad(self):
+        self.dL_dW_o.fill(0)
+        self.head.clear_grad()

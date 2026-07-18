@@ -1,27 +1,29 @@
-import numpy as np
+import cupy as cp
 import costs_and_activations as caa
 
 class attention_head(object):
 ####################################
 # Initializations #
 ####################################
-    def __init__(self, num_heads, d_model):
+    def __init__(self, num_heads, d_model, clip_val):
         
         # storing dimensions
         self.num_heads = num_heads
         self.d_model = d_model
+        self.clip_val = clip_val
+
         self.head_dimension = int(self.d_model / self.num_heads)
-        self.dim_sqrt = np.sqrt(self.head_dimension)
+        self.dim_sqrt = cp.sqrt(self.head_dimension)
 
         # initialization of weights - using only Xavier for now
-        self.dim_for_xavier = self.d_model + self.head_dimension
-        xavier_val = np.sqrt(2/(self.dim_for_xavier))
+        self.dim_for_xavier = self.d_model + self.d_model
+        xavier_val = cp.sqrt(2/(self.dim_for_xavier))
 
         # instead of having separate heads, initiating each weight matrix with the shape (d_model, d_model), as this is mathematically equivalent to having separate heads
         # does not matter whether in_dim or out_dim is first as both are d_model
-        self.W_q = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32) # query weights
-        self.W_k = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32) # key weights
-        self.W_v = np.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(np.float32) # value weights
+        self.W_q = cp.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(cp.float32) # query weights
+        self.W_k = cp.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(cp.float32) # key weights
+        self.W_v = cp.random.normal(0, xavier_val, size=(self.d_model, self.d_model)).astype(cp.float32) # value weights
 
         # storing previous layer hidden state for backprop
         self.prev_layer_output = None
@@ -33,6 +35,11 @@ class attention_head(object):
 
         # for storing during train forward pass
         self.softmax_masked_score = None
+
+        # storing grads
+        self.dL_dW_q = cp.zeros_like(self.W_q)
+        self.dL_dW_k = cp.zeros_like(self.W_k)
+        self.dL_dW_v = cp.zeros_like(self.W_v)
 
 ####################################
 # Forward Pass #
@@ -62,8 +69,8 @@ class attention_head(object):
         scaled_score_matrix = score_matrix / self.dim_sqrt
 
         # determining & applying the mask
-        score_mask = np.tril(np.ones(shape=(x.shape[1], x.shape[1])))
-        masked_score = np.where(score_mask, scaled_score_matrix, -1e9)
+        score_mask = cp.tril(cp.ones(shape=(x.shape[1], x.shape[1])))
+        masked_score = cp.where(score_mask, scaled_score_matrix, -1e9)
 
         #applying softmax
         softmax_masked_score = caa.softmax(masked_score)
@@ -77,7 +84,7 @@ class attention_head(object):
 ####################################
 # Backward Pass #
 ####################################    
-    def backward_pass(self, learning_rate, dL_dY):
+    def backward_pass(self, dL_dY):
 
         dL_dv = self.softmax_masked_score.transpose(0,1,3,2) @ dL_dY
 
@@ -101,9 +108,9 @@ class attention_head(object):
         dL_dk_flat_1 = dL_dk.transpose(0,2,1,3).reshape(-1, self.d_model)
         dL_dv_flat_1 = dL_dv.transpose(0,2,1,3).reshape(-1, self.d_model)
 
-        dL_dW_q = dL_dq_flat_1.T @ prev_layer_output_flat
-        dL_dW_k = dL_dk_flat_1.T @ prev_layer_output_flat
-        dL_dW_v = dL_dv_flat_1.T @ prev_layer_output_flat
+        self.dL_dW_q += dL_dq_flat_1.T @ prev_layer_output_flat
+        self.dL_dW_k += dL_dk_flat_1.T @ prev_layer_output_flat
+        self.dL_dW_v += dL_dv_flat_1.T @ prev_layer_output_flat
 
         # dL_dY output of the head - sum of dL_dY_q, dL_dY_k, and dL_dY_v
         # flattening to be 3d to pass back dL_dY
@@ -118,12 +125,19 @@ class attention_head(object):
         # taking the sume of all 3 to get the true dL_dY - this is mathmematically consistent with the chain rule
         dL_dAttn_head = dL_dAttn_head_q + dL_dAttn_head_k + dL_dAttn_head_v
 
-        self.update(learning_rate, dL_dW_q, dL_dW_k, dL_dW_v)#, batch_size)
-
         return dL_dAttn_head
 
-    def update(self, learning_rate, dL_dW_q, dL_dW_k, dL_dW_v):
-        
-        self.W_q += -learning_rate * dL_dW_q
-        self.W_k += -learning_rate * dL_dW_k
-        self.W_v += -learning_rate * dL_dW_v
+    def update(self, learning_rate):
+        # clipping
+        cp.clip(self.dL_dW_q, -self.clip_val, self.clip_val, out=self.dL_dW_q)
+        cp.clip(self.dL_dW_k, -self.clip_val, self.clip_val, out=self.dL_dW_k)
+        cp.clip(self.dL_dW_v, -self.clip_val, self.clip_val, out=self.dL_dW_v)
+
+        self.W_q += -learning_rate * self.dL_dW_q
+        self.W_k += -learning_rate * self.dL_dW_k
+        self.W_v += -learning_rate * self.dL_dW_v
+    
+    def clear_grad(self):
+        self.dL_dW_q.fill(0)
+        self.dL_dW_k.fill(0)
+        self.dL_dW_v.fill(0)

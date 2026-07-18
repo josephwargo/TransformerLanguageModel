@@ -1,8 +1,8 @@
-import numpy as np
+import cupy as cp
 
 # functions to compute costs and gradients of costs
 def MSE(y, y_pred):
-    return .5*np.mean((y-y_pred)**2)
+    return .5*cp.mean((y-y_pred)**2)
 def MSEgradient(y, y_pred):
     return (y_pred-y) / y.size
 
@@ -10,48 +10,50 @@ def MSEgradient(y, y_pred):
 def cross_entropy_loss(logits, Y_ind):
     # determining maxes to normalize
     max_logits = logits.max(axis=1, keepdims=True)
+    shifted_logits = logits - max_logits
+    true_val_logits = shifted_logits[cp.arange(shifted_logits.shape[0]), Y_ind][:, None]
+    
     # using log sum exp trick
-    norm_exp = np.exp(logits - max_logits)
-    sum_norm_exp = norm_exp.sum(axis=1, keepdims=True)
-    log_sum_exp = max_logits + np.log(sum_norm_exp)
+    exp_logits = cp.exp(shifted_logits)
+    sum_norm_exp = exp_logits.sum(axis=1, keepdims=True)
+    log_sum_exp = cp.log(sum_norm_exp)
 
     # geting the log probability
-    true_val_logits = logits[np.arange(logits.shape[0]), Y_ind][:, None]
     log_prob = log_sum_exp - true_val_logits
     return log_prob.mean()
 
 # functions to compute activation and gradient of activations
 def sigmoid(x):
-    return 1 / (1 + np.exp(-(x)))
+    return 1 / (1 + cp.exp(-(x)))
 def sigmoidGradient(y):
     return y*(1-y)
 
 def relu(x):
-    return np.maximum(0, x)
+    return cp.maximum(0, x)
 def relu_grad(y):
     return (y>0)*1
 
 def tanH(x):
-    numerator = np.exp(x) - np.exp(-x)
-    denominator = np.exp(x) + np.exp(-x)
+    numerator = cp.exp(x) - cp.exp(-x)
+    denominator = cp.exp(x) + cp.exp(-x)
     return numerator/denominator
 def tanHGradient(y):
     return 1 - y**2
 
 def softmax(logits):
-    normalization = np.max(logits, axis=-1, keepdims=True)
-    numerator = np.exp(logits - normalization)
-    denominator = np.sum(numerator, axis=-1, keepdims=True)
+    normalization = cp.max(logits, axis=-1, keepdims=True)
+    numerator = cp.exp(logits - normalization)
+    denominator = cp.sum(numerator, axis=-1, keepdims=True)
     return numerator / denominator
 def softmax_grad(softmax_score, dL_dY):
-    dot_product_sum = np.sum(dL_dY * softmax_score, axis=-1, keepdims=True)
+    dot_product_sum = cp.sum(dL_dY * softmax_score, axis=-1, keepdims=True)
     dL_dZ = softmax_score * (dL_dY - dot_product_sum)
     return dL_dZ
 
 # special gradient for softmax & cross entropy loss
 def softmax_cross_entropy_grad(logits, Y_ind):
     prob_dist = softmax(logits)
-    prob_dist[np.arange(prob_dist.shape[0]), Y_ind] -= 1.0
+    prob_dist[cp.arange(prob_dist.shape[0]), Y_ind] -= 1.0
     return prob_dist / logits.shape[0]
     # return prob
 

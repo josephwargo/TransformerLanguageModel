@@ -1,28 +1,31 @@
-import numpy as np
+import cupy as cp
 
 class layer_norm(object):
 ####################################
 # Initializations #
 ####################################
-    def __init__(self, input_size):
+    def __init__(self, input_size, clip_val):
         # self.batch_size = batch_size
 
-        self.gamma = np.ones(shape=input_size)
-        self.beta = np.zeros(shape=input_size)
+        self.clip_val = clip_val
+
+        self.gamma = cp.ones(shape=input_size)
+        self.beta = cp.zeros(shape=input_size)
 
         self.prev_layer_output = None
         self.x_std_dev = None
         self.x_hat_val = None
 
+        self.dL_dgamma = cp.zeros_like(self.gamma)
+        self.dL_dbeta = cp.zeros_like(self.beta)
+
 ####################################
 # Forward Pass #
 ####################################
     def x_hat(self, x, train=False):
-        if train:
-            self.prev_layer_output = x
 
-        x_mean = np.mean(x, axis=-1, keepdims=True)
-        x_std_dev = np.sqrt(np.var(x, axis=-1, keepdims=True) + 1e-5)
+        x_mean = cp.mean(x, axis=-1, keepdims=True)
+        x_std_dev = cp.sqrt(cp.var(x, axis=-1, keepdims=True) + 1e-5)
 
         if train:
             self.x_std_dev = x_std_dev
@@ -45,10 +48,10 @@ class layer_norm(object):
 ####################################
 # Backward Pass #
 ####################################    
-    def backward_pass(self, learning_rate, dL_dY):
+    def backward_pass(self, dL_dY):
         # gradients to update gamma and beta
-        dL_dgamma = (dL_dY * self.x_hat_val).sum(axis=(0,1))
-        dL_dbeta = dL_dY.sum(axis=(0,1))
+        self.dL_dgamma += (dL_dY * self.x_hat_val).sum(axis=(0,1))
+        self.dL_dbeta += dL_dY.sum(axis=(0,1))
 
         # gradient to pass back into normalization step
         dL_dx_hat = dL_dY * self.gamma
@@ -61,10 +64,16 @@ class layer_norm(object):
         
         dL_dx = (dL_dx_hat_direct - dL_dx_hat_mean_penalty - dL_dx_hat_variance_penalty) / (self.x_std_dev * dL_dY.shape[-1])
 
-        self.update(learning_rate, dL_dgamma, dL_dbeta)
-
         return dL_dx
 
-    def update(self, learning_rate, dL_dgamma, dL_dbeta):
-        self.gamma += -learning_rate * dL_dgamma
-        self.beta += -learning_rate * dL_dbeta
+    def update(self, learning_rate):
+        # clipping
+        cp.clip(self.dL_dgamma, -self.clip_val, self.clip_val, out=self.dL_dgamma)
+        cp.clip(self.dL_dbeta, -self.clip_val, self.clip_val, out=self.dL_dbeta)
+
+        self.gamma += -learning_rate * self.dL_dgamma
+        self.beta += -learning_rate * self.dL_dbeta
+
+    def clear_grad(self):
+        self.dL_dgamma.fill(0)
+        self.dL_dbeta.fill(0)

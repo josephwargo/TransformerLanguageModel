@@ -1,4 +1,4 @@
-import numpy as np
+import cupy as cp
 import Attention.attention_block as ab
 import feed_forward as ff
 import layer_norm as ln
@@ -21,15 +21,15 @@ class transformer_block(object):
         self.adam = adam
 
         # first layer norm
-        self.layer_norm_1 = ln.layer_norm(self.d_model)
+        self.layer_norm_1 = ln.layer_norm(self.d_model, clip_val)
 
         # self-attention
         self.self_attention = ab.attention_block(
-              num_heads=num_heads, d_model=self.d_model
+              num_heads=num_heads, d_model=self.d_model, clip_val=clip_val
         )
 
         # second layer norm
-        self.layer_norm_2 = ln.layer_norm(self.d_model)
+        self.layer_norm_2 = ln.layer_norm(self.d_model, clip_val)
 
         # feed forward
         self.feed_forward_layer = ff.neuron_layer(
@@ -55,23 +55,38 @@ class transformer_block(object):
 ####################################
 # Backward Pass #
 ####################################
-    def backward_pass(self, learning_rate, dL_dY, pad_token_ind=0):
+    def backward_pass(self, dL_dY, pad_token_ind=0):
         #Feed Forward backward pass - will need to add before passing back again
-        dL_dFF = self.feed_forward_layer.backward_pass(learning_rate, dL_dY, pad_token_ind=pad_token_ind)
+        dL_dFF = self.feed_forward_layer.backward_pass(dL_dY, pad_token_ind=pad_token_ind)
         
         #Layer Norm backward pass
-        dL_dLayer_norm_2 = self.layer_norm_2.backward_pass(learning_rate, dL_dFF)
+        dL_dLayer_norm_2 = self.layer_norm_2.backward_pass(dL_dFF)
 
         # adding back for the residual stream - will need to add this gradient back in at the end
         dL_dResidual_with_self_attention = dL_dLayer_norm_2 + dL_dY
 
         # attention backward pass
-        dL_dAttn = self.self_attention.backward_pass(learning_rate, dL_dResidual_with_self_attention)
+        dL_dAttn = self.self_attention.backward_pass(dL_dResidual_with_self_attention)
 
         # Layer Norm backward pass
-        dL_dLayer_norm_1 = self.layer_norm_1.backward_pass(learning_rate, dL_dAttn)
+        dL_dLayer_norm_1 = self.layer_norm_1.backward_pass(dL_dAttn)
 
         # adding in previously stored gradient 
         dL_dRes_add_1 = dL_dLayer_norm_1 + dL_dResidual_with_self_attention
 
         return dL_dRes_add_1
+
+####################################
+# Update and clear gradients #
+####################################
+    def update(self, learning_rate):
+        self.feed_forward_layer.update(learning_rate)
+        self.layer_norm_2.update(learning_rate)
+        self.self_attention.update(learning_rate)
+        self.layer_norm_1.update(learning_rate)
+
+    def clear_grad(self):
+        self.feed_forward_layer.clear_grad()
+        self.layer_norm_2.clear_grad()
+        self.self_attention.clear_grad()
+        self.layer_norm_1.clear_grad()

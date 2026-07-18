@@ -1,4 +1,7 @@
-import numpy as np
+import cupy as cp
+mempool = cp.get_default_memory_pool()
+pinned_mempool = cp.get_default_pinned_memory_pool()
+
 import feed_forward as ff
 import costs_and_activations as caa
 import Embeddings.positional_embedding as pe
@@ -13,7 +16,7 @@ class transformer(object):
 ####################################
     def __init__(
           self
-        # , embeddings, word2ind
+        , embeddings
         , input_layer_shape, input_layer_activation
         , d_model, hidden_layer_activations
         , hidden_layer_num_heads
@@ -23,21 +26,14 @@ class transformer(object):
         , learning_rate=.001, epochs=1, batch_size=8
         , adam=False, clip_val=1, debug=False
     ):
-        
+        self.embeddings = embeddings
+
         self.debug = debug
 
         # errors
         if adam & (learning_rate>.01):
             print('Warning: Learning rate may be too high for ADAM optimizer to function properly')
        
-        # variables straight from initialization
-        # embeddings
-        # self.embeddings = embeddings
-        # self.corpus = corpus
-        # self.word2ind = word2ind
-        # self.word2ind_mapper = np.vectorize(word2ind.get)
-        # self.embeddings_shape = embeddings.shape[1]
-        # self.num_embeddings = embeddings.shape[0]
 
         # layer details
         self.input_layer_shape = input_layer_shape
@@ -46,24 +42,15 @@ class transformer(object):
         self.hidden_layer_activations = hidden_layer_activations
         self.hidden_layer_num_heads = hidden_layer_num_heads
         self.output_shape = output_shape
-        # self.output_layer_activation = output_layer_activation
         
         # hyperparameters
         self.epochs = epochs
         self.batch_size = batch_size
         self.adam = adam
-        self.learning_rate = np.float32(learning_rate)
+        self.learning_rate = cp.float32(learning_rate)
         self.loss_function = loss_function
-        self.clip_val = np.float32(clip_val)
-        self.activations = hidden_layer_activations# + [output_layer_activation]
-
-        # loss
-        # self.localLoss = []
-        # self.loss = []
-        # self.lossGradients = []
-
-        # layers
-        # self.layers = []
+        self.clip_val = cp.float32(clip_val)
+        self.activations = hidden_layer_activations
         
 ####################################
 # Init Input Layer
@@ -73,7 +60,7 @@ class transformer(object):
             , activation=self.input_layer_activation
             , clip_val=self.clip_val, adam=self.adam
         )
-        self.positional_embeddings = pe.positional_embedding(max_seq_len=1024, input_layer_shape=self.d_model)
+        self.positional_embeddings = pe.positional_embedding(max_seq_len=1024, input_layer_shape=self.d_model, clip_val=clip_val)
 
 ####################################
 # Init Transformer Blocks
@@ -88,12 +75,16 @@ class transformer(object):
                 , clip_val=self.clip_val
                 , adam=self.adam
             )
+        
+        # backwards list to iterate through during backwards pass
+        self.rev_transformer_layers = list(self.transformer_layers.keys())
+        self.rev_transformer_layers.reverse()
 
 ####################################
 # Init Output Layer #
 ####################################
         output_layer_input_shape = self.d_model
-        self.output_layer_norm = ln.layer_norm(output_layer_input_shape)
+        self.output_layer_norm = ln.layer_norm(output_layer_input_shape, clip_val=clip_val)
         self.output_layer = ff.neuron_layer(
               input_shape=output_layer_input_shape, output_shape=self.output_shape
             , activation=None # activation is none so this returns the logits, we apply the activation later for gradients
@@ -102,9 +93,11 @@ class transformer(object):
 ####################################
 # Forward Pass #
 ####################################
-    def forward_pass(self, x, Y=None, train=False):
+    def forward_pass(self, x_ind, Y=None, train=False):
+        # x from ind to embeddings
+        x = self.embeddings[x_ind]
+        
         # input layer
-        # batch_length = x.shape[-1]
         seq_len = x.shape[-2]
         x = self.input_layer.forward_pass(x, train)
         x = self.positional_embeddings.forward_pass(x, seq_len, train)
@@ -128,35 +121,58 @@ class transformer(object):
             logits = self.output_layer.forward_pass(x[:, -1, :], train)
             loss = None
 
+        del x
+
         return logits, loss
     
     def next_token_vocab_index(self, x):
         # TODO: add "temperature" so we can sample the softmax
         logits, loss = self.forward_pass(x)
         prob_dist = caa.activation('softmax', logits)
-        return np.argmax(prob_dist, axis=1), prob_dist
+        return cp.argmax(prob_dist, axis=1), prob_dist
 
 ####################################
 # Backward Pass #
 ####################################
-
     def backward_pass(self, logits, Y, pad_token_ind=0):
 
-        dL_dY = self.output_layer.backward_pass(self.learning_rate, logits=logits, Y=Y, pad_token_ind=pad_token_ind)
+        dL_dY = self.output_layer.backward_pass(logits=logits, Y=Y, pad_token_ind=pad_token_ind)
+        dL_dY = self.output_layer_norm.backward_pass(dL_dY)
 
-        dL_dY = self.output_layer_norm.backward_pass(self.learning_rate, dL_dY)
-
-        # reversing order of transformer dict for backwards pass
-        rev_transformer_layers = list(self.transformer_layers.keys())
-        rev_transformer_layers.reverse()
-        
-        for layer_name in rev_transformer_layers:
+        for layer_name in self.rev_transformer_layers:
             transformer_block = self.transformer_layers[layer_name]
-            dL_dY = transformer_block.backward_pass(self.learning_rate, dL_dY)
+            dL_dY = transformer_block.backward_pass(dL_dY)
 
         # input layer
-        dL_dY = self.positional_embeddings.backward_pass(self.learning_rate, dL_dY)
-        dL_dY = self.input_layer.backward_pass(self.learning_rate, dL_dY=dL_dY, pad_token_ind=pad_token_ind)
+        dL_dY = self.positional_embeddings.backward_pass(dL_dY)
+        dL_dY = self.input_layer.backward_pass(dL_dY=dL_dY, pad_token_ind=pad_token_ind)
+
+        # leaving updates and clearing grads out, this is just a single instance of a backward pass and gradient accumulation
+
+####################################
+# Gradient updates and clearing - all at once #
+####################################
+    def update(self):
+        self.output_layer.update(self.learning_rate)
+        self.output_layer_norm.update(self.learning_rate)
+
+        for layer_name in self.rev_transformer_layers:
+            transformer_block = self.transformer_layers[layer_name]
+            transformer_block.update(self.learning_rate)
+        
+        self.positional_embeddings.update(self.learning_rate)
+        self.input_layer.update(self.learning_rate)
+
+    def clear_grad(self):
+        self.output_layer.clear_grad()
+        self.output_layer_norm.clear_grad()
+
+        for layer_name in self.rev_transformer_layers:
+            transformer_block = self.transformer_layers[layer_name]
+            transformer_block.clear_grad()
+        
+        self.positional_embeddings.clear_grad()
+        self.input_layer.clear_grad()
 
 ####################################
 # Training #
@@ -175,24 +191,34 @@ class transformer(object):
             print("")
             # backward pass
             dL_dY = self.backward_pass(logits=logits, Y=Y_batch)
+            self.update()
+            self.clear_grad()
+            # mempool.free_all_blocks()
+            # pinned_mempool.free_all_blocks()
 
 
 ####################################
-# Misc Functions #
+# Saving trained model #
 ####################################
-    def get_model_dict(self):
+    # creates a dictionary that has all weights and biases for the corresponding layers + configs necessary to recreate the model
+    def get_model_dict(self, mode=None):
         model_dict = {}
 
-        # input layer
-        model_dict['input_layer_weights'] = self.input_layer.layer_weights
-        model_dict['input_layer_biases'] = self.input_layer.bias
+        input_layer_dict = {}
+        # input layer dict
+        input_layer_dict['input_layer_weights'] = self.input_layer.layer_weights
+        input_layer_dict['input_layer_biases'] = self.input_layer.bias
+
+        model_dict['input_layer_dict'] = input_layer_dict
 
         # pos embeddings
         model_dict['positional_embeddings'] = self.positional_embeddings.embeddings
 
         # transformer layers
+        transformer_dict = {}
         for layer_name, block in self.transformer_layers.items():
-            # layer norm 1
+            transformer_dict = transformer_dict.copy()
+            # layer norm 1 
             model_dict[f'{layer_name}_layer_norm_1_gamma'] = block.layer_norm_1.gamma
             model_dict[f'{layer_name}_layer_norm_1_beta'] = block.layer_norm_1.beta
 
@@ -229,14 +255,16 @@ class transformer(object):
 
         return model_dict, config
 
+    # saving dict of model to filepath
     def save_model(self, file_path):
         model_dict, config = self.get_model_dict()
 
         with open(f'{file_path}/config.json', 'w') as f:
             json.dump(config, f)
 
-        np.savez_compressed(f'{file_path}/model.npz', **model_dict)
+        cp.savez_compressed(f'{file_path}/model.npz', **model_dict)
 
+    # recreating model from dict so it can be queried or further trained using same setup
     def load_model(self, file_path):
         with open(f'{file_path}/config.json', 'r') as f:
             config = json.load(f)
@@ -245,7 +273,7 @@ class transformer(object):
         # model = bt.transformer(**config)
 
         # initiating weights and biases based on what we have stored
-        model_dict = np.load(f'{file_path}/model.npz')
+        model_dict = cp.load(f'{file_path}/model.npz')
 
 
         # input layer
