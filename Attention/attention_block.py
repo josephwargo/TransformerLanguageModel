@@ -86,4 +86,5 @@ class attention_block(object):
 
     def clear_grad(self):
         self.dL_dW_o.fill(0)
+        print(self.dL_dW_o)
         self.head.clear_grad()
