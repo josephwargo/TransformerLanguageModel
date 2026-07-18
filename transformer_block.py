@@ -25,7 +25,7 @@ class transformer_block(object):
 
         # self-attention
         self.self_attention = ab.attention_block(
-              num_heads=num_heads, d_model=self.d_model, clip_val
+              num_heads=num_heads, d_model=self.d_model, clip_val=clip_val
         )
 
         # second layer norm

@@ -14,6 +14,8 @@ class attention_block(object):
         self.d_model = d_model
         self.head_output_dimension = int(d_model/num_heads)
 
+        self.clip_val = clip_val
+
         # dictionary to store heads
         # self.heads = {}
         # for head_num in range(self.num_heads):
