@@ -60,7 +60,7 @@ class transformer(object):
             , activation=self.input_layer_activation
             , clip_val=self.clip_val, adam=self.adam
         )
-        self.positional_embeddings = pe.positional_embedding(max_seq_len=1024, input_layer_shape=self.d_model)
+        self.positional_embeddings = pe.positional_embedding(max_seq_len=1024, input_layer_shape=self.d_model, clip_val=clip_val)
 
 ####################################
 # Init Transformer Blocks
