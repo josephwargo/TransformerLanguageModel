@@ -137,7 +137,6 @@ class transformer(object):
     def backward_pass(self, logits, Y, pad_token_ind=0):
 
         dL_dY = self.output_layer.backward_pass(logits=logits, Y=Y, pad_token_ind=pad_token_ind)
-
         dL_dY = self.output_layer_norm.backward_pass(dL_dY)
 
         for layer_name in self.rev_transformer_layers:
@@ -156,7 +155,6 @@ class transformer(object):
     def update(self):
         self.output_layer.update(self.learning_rate)
         self.output_layer_norm.update(self.learning_rate)
-        self.output_layer.update(self.learning_rate)
 
         for layer_name in self.rev_transformer_layers:
             transformer_block = self.transformer_layers[layer_name]
@@ -168,7 +166,6 @@ class transformer(object):
     def clear_grad(self):
         self.output_layer.clear_grad()
         self.output_layer_norm.clear_grad()
-        self.output_layer.clear_grad()
 
         for layer_name in self.rev_transformer_layers:
             transformer_block = self.transformer_layers[layer_name]
