@@ -73,7 +73,7 @@ class transformer_block(object):
 
         # adding in previously stored gradient 
         dL_dRes_add_1 = dL_dLayer_norm_1 + dL_dResidual_with_self_attention
-
+        print(dL_dRes_add_1.shape)
         return dL_dRes_add_1
 
 ####################################
