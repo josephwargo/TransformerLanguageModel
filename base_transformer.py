@@ -2,11 +2,11 @@ import cupy as cp
 mempool = cp.get_default_memory_pool()
 pinned_mempool = cp.get_default_pinned_memory_pool()
 
-import feed_forward as ff
+import Layer_Blocks.feed_forward as ff
 import costs_and_activations as caa
 import Embeddings.positional_embedding as pe
-import layer_norm as ln
-import transformer_block as tb
+import Layer_Blocks.layer_norm as ln
+import Layer_Blocks.transformer_block as tb
 import json
 
 # entire net
@@ -204,12 +204,9 @@ class transformer(object):
     def get_model_dict(self, mode=None):
         model_dict = {}
 
-        input_layer_dict = {}
         # input layer dict
-        input_layer_dict['input_layer_weights'] = self.input_layer.layer_weights
-        input_layer_dict['input_layer_biases'] = self.input_layer.bias
-
-        model_dict['input_layer_dict'] = input_layer_dict
+        model_dict['input_layer_weights'] = self.input_layer.layer_weights
+        model_dict['input_layer_biases'] = self.input_layer.bias
 
         # pos embeddings
         model_dict['positional_embeddings'] = self.positional_embeddings.embeddings

@@ -1,7 +1,7 @@
 import cupy as cp
 import Attention.attention_block as ab
-import feed_forward as ff
-import layer_norm as ln
+import Layer_Blocks.feed_forward as ff
+import Layer_Blocks.layer_norm as ln
 
 class transformer_block(object):
 ####################################
